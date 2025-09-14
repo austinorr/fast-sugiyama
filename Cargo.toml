@@ -1,0 +1,27 @@
+[workspace]
+members = ["crates/*"]
+default-members = ["crates/*"]
+
+
+[workspace.package]
+name = "fast-sugiyama"
+version = "0.1.0"
+edition = "2024"
+
+
+[workspace.dependencies]
+rust-sugiyama = { version = "0.3.0", path = "crates/rust-sugiyama" }
+
+log = "0.4"
+petgraph = "0.8"
+graph_generator = { git = "https://github.com/paddison/graph_generator.git", rev = "8894f9b6a6e7c3" }
+svg = "0.18.0"
+
+
+[profile.release-lto]
+inherits = "release"
+debug = false
+codegen-units = 1
+lto = true
+strip = true
+panic = "abort"
