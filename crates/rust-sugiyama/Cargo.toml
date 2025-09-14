@@ -20,5 +20,5 @@ log = "0.4.20"
 petgraph = "0.8.1"
 
 [dev-dependencies]
-graph_generator = { git = "https://github.com/paddison/graph_generator.git" }
+graph_generator = { git = "https://github.com/paddison/graph_generator.git#8894f9b6a6e7c3" }
 svg = "0.18.0"
