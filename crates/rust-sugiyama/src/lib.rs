@@ -10,8 +10,8 @@ mod algorithm;
 pub mod configure;
 mod util;
 
-type Layout = (Vec<(usize, (f64, f64))>, f64, f64);
-type Layouts<T> = Vec<(Vec<(T, (f64, f64))>, f64, f64)>;
+pub type Layout<T> = (Vec<(T, (f64, f64))>, f64, f64);
+pub type Layouts<T> = Vec<Layout<T>>;
 
 /// Creates a graph layout from edges, which are given as a `&[(u32, u32)]`.
 ///

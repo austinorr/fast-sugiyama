@@ -19,7 +19,10 @@
 use std::collections::{BTreeMap, HashMap};
 
 use log::{debug, info};
-use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
+use petgraph::{
+    stable_graph::{EdgeIndex, NodeIndex, StableDiGraph},
+    Direction,
+};
 
 use crate::configure::{
     Config, CrossingMinimization, RankingType, COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET,
@@ -127,8 +130,37 @@ fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
     }
 }
 
+fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Start building layout");
     info!(target: LAYOUT_LOG_TARGET, "Configuration is: {:?}", config);
+
+    // Count nodes with an out-degree of zero (roots)
+    let nroots = graph
+        .node_indices()
+        .filter(|&node_idx| {
+            graph
+                .neighbors_directed(node_idx, Direction::Outgoing)
+                .count()
+                == 0
+        })
+        .count();
+
+    // Count nodes with an in-degree of zero (leaves)
+    let nleaves = graph
+        .node_indices()
+        .filter(|&node_idx| {
+            graph
+                .neighbors_directed(node_idx, Direction::Incoming)
+                .count()
+                == 0
+        })
+        .count();
+
+    let reverse = nleaves < nroots; // works better advancing towards roots than towards leaves
+
+    if reverse {
+        graph.reverse();
+    }
 
     // Treat the vertex spacing as just additional padding in each node. Each node will then take
     // 50% of the "responsibility" of the vertex spacing. This does however mean that dummy vertices
@@ -156,7 +188,7 @@ fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
         config.transpose,
     );
 
-    let layout = execute_phase_3(&mut graph, layers);
+    let layout = execute_phase_3(&mut graph, layers, reverse);
     debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,
@@ -209,14 +241,16 @@ fn execute_phase_2(
 fn execute_phase_3(
     graph: &mut StableDiGraph<Vertex, Edge>,
     mut layers: Vec<Vec<NodeIndex>>,
+    reverse: bool,
+) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 3: Coordinate Calculation");
     for n in graph.node_indices().collect::<Vec<_>>() {
         if graph[n].is_dummy {
             graph[n].id = n.index();
         }
     }
-    let width = layers.iter().map(|l| l.len()).max().unwrap_or(0) as f64;
-    let height = layers.len() as f64;
+    let _width = layers.iter().map(|l| l.len()).max().unwrap_or(0) as f64;
+    let _height = layers.len() as f64;
     let mut layouts = p3::create_layouts(graph, &mut layers);
 
     p3::align_to_smallest_width_layout(&mut layouts);
@@ -253,6 +287,32 @@ fn execute_phase_3(
         current_rank_top_offset += max_height;
     }
 
+    // since this has already been shifted to be > 0, the max == width
+    let width = x_coordinates
+        .iter()
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap()
+        .1;
+
+    // since vertices all share ranks, this is faster than taking the max y coordinate.
+    let height = *rank_to_y_offset
+        .values()
+        .max_by(|a, b| a.total_cmp(b))
+        .unwrap();
+
+    // flip y by default to match `dot` program convention with
+    // directions trending downward
+    let mut flip_y = -1.0;
+    let mut yoff = height;
+
+    if reverse {
+        // earlier we reversed the edge directions to get a better layout
+        // but we don't want to flip it since the edge direction should already
+        // trend downward
+        flip_y = 1.0;
+        yoff = 0.0;
+    }
+
     let mut v = x_coordinates.iter().collect::<Vec<_>>();
     v.sort_by(|a, b| a.0.index().cmp(&b.0.index()));
     // format to NodeIndex: (x, y), width, height
@@ -264,7 +324,10 @@ fn execute_phase_3(
             .map(|(v, x)| {
                 (
                     graph[v].id,
-                    (x, *rank_to_y_offset.get(&graph[v].rank).unwrap()),
+                    (
+                        x,
+                        *rank_to_y_offset.get(&graph[v].rank).unwrap() * flip_y + yoff,
+                    ),
                 )
             })
             .collect::<Vec<_>>(),
