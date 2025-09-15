@@ -40,7 +40,7 @@ fn create_test_layout() -> (StableDiGraph<Vertex, Edge>, Vec<Vec<NodeIndex>>) {
         (25, 15),
     ];
 
-    let mut graph = StableDiGraph::<Vertex, Edge>::from_edges(&edges);
+    let mut graph = StableDiGraph::<Vertex, Edge>::from_edges(edges);
     let layers: Vec<Vec<NodeIndex>> = [
         vec![0, 1],
         vec![2, 3, 16, 4, 17, 18, 5, 6],
@@ -164,21 +164,21 @@ fn alignment_down_left() {
         assert_eq!(g[NodeIndex::from(n)].root, 0.into());
     }
     // block root 1
-    for n in [1] {
-        assert_eq!(g[NodeIndex::from(n)].root, 1.into());
+    for n in [1, 2, 3, 16, 22] {
+        assert_eq!(g[NodeIndex::from(n)].root, n.into());
     }
     // block root 2
-    for n in [2] {
-        assert_eq!(g[NodeIndex::from(n)].root, 2.into());
-    }
-    // block root 3
-    for n in [3] {
-        assert_eq!(g[NodeIndex::from(n)].root, 3.into());
-    }
+    // for n in [2] {
+    //     assert_eq!(g[NodeIndex::from(n)].root, 2.into());
+    // }
+    // // block root 3
+    // for n in [3] {
+    //     assert_eq!(g[NodeIndex::from(n)].root, 3.into());
+    // }
     // block root 16
-    for n in [16] {
-        assert_eq!(g[NodeIndex::from(n)].root, 16.into());
-    }
+    // for n in [16] {
+    //     assert_eq!(g[NodeIndex::from(n)].root, 16.into());
+    // }
     // block root 4
     for n in [4, 8] {
         assert_eq!(g[NodeIndex::from(n)].root, 4.into());
@@ -208,9 +208,9 @@ fn alignment_down_left() {
         assert_eq!(g[NodeIndex::from(n)].root, 10.into());
     }
     // block root 22
-    for n in [22] {
-        assert_eq!(g[NodeIndex::from(n)].root, 22.into());
-    }
+    // for n in [22] {
+    //     assert_eq!(g[NodeIndex::from(n)].root, 22.into());
+    // }
 }
 
 #[test]
@@ -320,7 +320,7 @@ fn alignment_up_left() {
 #[test]
 fn place_blocks() {
     let (mut g, mut l) = create_test_layout();
-    mark_type_1_conflicts(&mut g, &mut l);
+    mark_type_1_conflicts(&mut g, &l);
     create_vertical_alignments(&mut g, &mut l);
 
     let block_1: Vec<NodeIndex> = [

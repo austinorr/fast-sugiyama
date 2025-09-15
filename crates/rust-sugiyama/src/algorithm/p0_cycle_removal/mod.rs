@@ -53,15 +53,14 @@ mod tests {
 
     #[test]
     fn test_graph_simple_no_cycles() {
-        let mut graph =
-            StableDiGraph::<Vertex, Edge>::from_edges(&[(0, 1), (0, 2), (1, 3), (2, 3)]);
+        let mut graph = StableDiGraph::<Vertex, Edge>::from_edges([(0, 1), (0, 2), (1, 3), (2, 3)]);
         assert!(!is_cyclic_directed(&graph));
         assert!(remove_cycles(&mut graph).is_empty());
     }
 
     #[test]
     fn test_graph_simple_contains_cycle() {
-        let mut graph = StableDiGraph::<Vertex, Edge>::from_edges(&[
+        let mut graph = StableDiGraph::<Vertex, Edge>::from_edges([
             (2, 1),
             (1, 4),
             (4, 5),
@@ -78,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_graph_complex_contains_cycle() {
-        let mut graph = StableDiGraph::<Vertex, Edge>::from_edges(&[
+        let mut graph = StableDiGraph::<Vertex, Edge>::from_edges([
             (1, 2),
             (2, 5),
             (2, 6),

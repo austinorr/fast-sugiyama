@@ -107,15 +107,16 @@ fn run_algo_empty_graph() {
 #[cfg(test)]
 mod benchmark {
     use crate::configure::Config;
+    use graph_generator::layered::LayeredGraph;
+    use graph_generator::random::RandomGraph;
 
     use super::from_edges;
 
     #[test]
     fn r_100() {
-        let edges = graph_generator::RandomLayout::new(100)
+        let edges = RandomGraph::new(100)
             .build_edges()
             .into_iter()
-            .map(|(r, l)| (r as u32, l as u32))
             .collect::<Vec<(u32, u32)>>();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
@@ -124,10 +125,9 @@ mod benchmark {
 
     #[test]
     fn r_1000() {
-        let edges = graph_generator::RandomLayout::new(1000)
+        let edges = RandomGraph::new(1000)
             .build_edges()
             .into_iter()
-            .map(|(r, l)| (r as u32, l as u32))
             .collect::<Vec<(u32, u32)>>();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
@@ -136,7 +136,7 @@ mod benchmark {
 
     #[test]
     fn r_2000() {
-        let edges = graph_generator::RandomLayout::new(2000).build_edges();
+        let edges = RandomGraph::new(2000).build_edges();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
         println!("Random 2000 edges: {}ms", start.elapsed().as_millis());
@@ -144,7 +144,7 @@ mod benchmark {
 
     #[test]
     fn r_4000() {
-        let edges = graph_generator::RandomLayout::new(4000).build_edges();
+        let edges = RandomGraph::new(4000).build_edges();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
         println!("Random 4000 edges: {}ms", start.elapsed().as_millis());
@@ -154,7 +154,7 @@ mod benchmark {
     fn l_1000_2() {
         let n = 1000;
         let e = 2;
-        let edges = graph_generator::GraphLayout::new_from_num_nodes(n, e).build_edges();
+        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
         println!(
@@ -167,7 +167,7 @@ mod benchmark {
     fn l_2000_2() {
         let n = 2000;
         let e = 2;
-        let edges = graph_generator::GraphLayout::new_from_num_nodes(n, e).build_edges();
+        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
         println!(
@@ -180,7 +180,7 @@ mod benchmark {
     fn l_4000_2() {
         let n = 4000;
         let e = 2;
-        let edges = graph_generator::GraphLayout::new_from_num_nodes(n, e).build_edges();
+        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
         println!(
@@ -193,7 +193,7 @@ mod benchmark {
     fn l_8000_2() {
         let n = 8000;
         let e = 2;
-        let edges = graph_generator::GraphLayout::new_from_num_nodes(n, e).build_edges();
+        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
         let start = std::time::Instant::now();
         let _ = from_edges(&edges, &Config::default());
         println!(

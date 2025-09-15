@@ -1,6 +1,5 @@
 [workspace]
-members = ["crates/*"]
-default-members = ["crates/*"]
+members = ["crates/rust-sugiyama"]
 
 
 [workspace.package]
@@ -14,7 +13,7 @@ rust-sugiyama = { version = "0.3.0", path = "crates/rust-sugiyama" }
 
 log = "0.4"
 petgraph = "0.8"
-graph_generator = { git = "https://github.com/paddison/graph_generator.git", rev = "8894f9b6a6e7c3" }
+graph_generator = { git = "https://github.com/paddison/graph_generator.git", rev = "f454b849" }
 svg = "0.18.0"
 
 

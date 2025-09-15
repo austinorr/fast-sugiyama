@@ -45,7 +45,7 @@ fn main() {
 
         let mut new_layout = HashMap::new();
         for (id, coords) in layout {
-            new_layout.insert(g[NodeIndex::from(id)].clone(), coords);
+            new_layout.insert(g[id].clone(), coords);
         }
         (new_layout, width, height)
     })

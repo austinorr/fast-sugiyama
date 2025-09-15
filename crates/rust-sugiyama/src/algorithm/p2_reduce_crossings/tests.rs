@@ -258,7 +258,7 @@ mod insert_dummy_vertices {
             e.0 -= 1;
             e.1 -= 1;
         }
-        let g = StableDiGraph::from_edges(&edges);
+        let g = StableDiGraph::from_edges(edges);
         let c = Config::default();
         crate::algorithm::start(g, &c);
     }
