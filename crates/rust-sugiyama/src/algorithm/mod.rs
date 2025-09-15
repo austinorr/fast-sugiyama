@@ -21,7 +21,10 @@ use std::collections::{BTreeMap, HashMap};
 use log::{debug, info};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 
-use crate::configure::{Config, CrossingMinimization, RankingType};
+use crate::configure::{
+    Config, CrossingMinimization, RankingType, COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET,
+    INIT_LOG_TARGET, LAYOUT_LOG_TARGET,
+};
 use crate::{util::weakly_connected_components, Layout, Layouts};
 use p0_cycle_removal as p0;
 use p1_layering as p1;
@@ -112,7 +115,10 @@ pub(super) fn start(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> 
 }
 
 fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
-    info!("Initializing graphs vertex weights");
+    info!(
+        target: INIT_LOG_TARGET,
+        "Initializing graphs vertex weights"
+    );
     for id in graph.node_indices().collect::<Vec<_>>() {
         graph[id].id = id.index();
         graph[id].root = id;
@@ -121,9 +127,8 @@ fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
     }
 }
 
-fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layout {
-    info!(target: "layouting", "Start building layout");
-    info!(target: "layouting", "Configuration is: {:?}", config);
+    info!(target: LAYOUT_LOG_TARGET, "Start building layout");
+    info!(target: LAYOUT_LOG_TARGET, "Configuration is: {:?}", config);
 
     // Treat the vertex spacing as just additional padding in each node. Each node will then take
     // 50% of the "responsibility" of the vertex spacing. This does however mean that dummy vertices
@@ -152,7 +157,7 @@ fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layo
     );
 
     let layout = execute_phase_3(&mut graph, layers);
-    debug!(target: "layouting", "Coordinates: {:?}\nwidth: {}, height:{}",
+    debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,
         layout.2
@@ -161,7 +166,7 @@ fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layo
 }
 
 fn execute_phase_0(graph: &mut StableDiGraph<Vertex, Edge>) -> Vec<EdgeIndex> {
-    info!(target: "layouting", "Executing phase 0: Cycle Removal");
+    info!(target: LAYOUT_LOG_TARGET, "Executing phase 0: Cycle Removal");
     p0::remove_cycles(graph)
 }
 
@@ -171,7 +176,7 @@ fn execute_phase_1(
     minimum_length: i32,
     ranking_type: RankingType,
 ) {
-    info!(target: "layouting", "Executing phase 1: Ranking");
+    info!(target: LAYOUT_LOG_TARGET, "Executing phase 1: Ranking");
     p1::rank(graph, minimum_length, ranking_type);
 }
 
@@ -184,8 +189,8 @@ fn execute_phase_2(
     crossing_minimization: CrossingMinimization,
     transpose: bool,
 ) -> Vec<Vec<NodeIndex>> {
-    info!(target: "layouting", "Executing phase 2: Crossing Reduction");
-    info!(target: "layouting",
+    info!(target: LAYOUT_LOG_TARGET, "Executing phase 2: Crossing Reduction");
+    info!(target: LAYOUT_LOG_TARGET,
         "dummy vertex size: {:?}, heuristic for crossing minimization: {:?}, using transpose: {}",
         dummy_size,
         crossing_minimization,
@@ -204,8 +209,7 @@ fn execute_phase_2(
 fn execute_phase_3(
     graph: &mut StableDiGraph<Vertex, Edge>,
     mut layers: Vec<Vec<NodeIndex>>,
-) -> Layout {
-    info!(target: "layouting", "Executing phase 3: Coordinate Calculation");
+    info!(target: LAYOUT_LOG_TARGET, "Executing phase 3: Coordinate Calculation");
     for n in graph.node_indices().collect::<Vec<_>>() {
         if graph[n].is_dummy {
             graph[n].id = n.index();

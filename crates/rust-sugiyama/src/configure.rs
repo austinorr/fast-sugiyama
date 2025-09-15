@@ -20,6 +20,15 @@ const ENV_CROSSING_MINIMIZATION: &str = "RUST_GRAPH_CROSS_MIN";
 const ENV_TRANSPOSE: &str = "RUST_GRAPH_TRANSPOSE";
 const ENV_DUMMY_SIZE: &str = "RUST_GRAPH_DUMMY_SIZE";
 
+pub(crate) const INIT_LOG_TARGET: &str = "rust-sugiyama.initialization";
+pub(crate) const LAYOUT_LOG_TARGET: &str = "rust-sugiyama.layouting";
+pub(crate) const COORD_CALC_LOG_TARGET: &str = "rust-sugiyama.coordinate_calculation";
+pub(crate) const CROSSING_LOG_TARGET: &str = "rust-sugiyama.crossing_reduction";
+pub(crate) const RANKING_LOG_TARGET: &str = "rust-sugiyama.ranking";
+pub(crate) const LOW_LIM_LOG_TARGET: &str = "rust-sugiyama.low_lim";
+pub(crate) const CUT_VAL_LOG_TARGET: &str = "rust-sugiyama.cut_values";
+pub(crate) const CYCLE_LOG_TARGET: &str = "rust-sugiyama.cycle_removal";
+
 pub trait IntoCoordinates {}
 
 impl<V, E> IntoCoordinates for StableDiGraph<V, E> {}
@@ -32,7 +41,7 @@ macro_rules! read_env {
         match env::var($env).map($cb) {
             Ok(Ok(v)) => $field = v,
             Ok(Err(e)) => {
-                error!(target: "initialization", "{e}");
+                error!(target: INIT_LOG_TARGET, "{e}");
             }
             _ => (),
         }

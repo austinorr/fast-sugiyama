@@ -19,7 +19,7 @@ use log::info;
 use petgraph::stable_graph::{EdgeIndex, StableDiGraph};
 use petgraph::visit::IntoNodeIdentifiers;
 
-use crate::configure::RankingType;
+use crate::configure::{RankingType, CUT_VAL_LOG_TARGET, LOW_LIM_LOG_TARGET, RANKING_LOG_TARGET};
 
 use self::cut_values::update_cutvalues;
 use self::low_lim::update_low_lim;
@@ -32,7 +32,7 @@ pub(super) fn rank(
     minimum_length: i32,
     ranking_type: RankingType,
 ) {
-    info!(target: "ranking", "Start ranking, ranking type: {ranking_type:?}, minimum_length: {minimum_length}");
+    info!(target: RANKING_LOG_TARGET, "Start ranking, ranking type: {ranking_type:?}, minimum_length: {minimum_length}");
     init_rank(graph, minimum_length);
     match ranking_type {
         RankingType::Original => original(graph, minimum_length),

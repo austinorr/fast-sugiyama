@@ -9,7 +9,7 @@ use petgraph::algo::toposort;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::Direction::{Incoming, Outgoing};
 
-use crate::configure::CrossingMinimization;
+use crate::configure::{CrossingMinimization, CROSSING_LOG_TARGET};
 use crate::util::{iterate, radix_sort, IterDir};
 
 use super::{slack, Edge, Vertex};
@@ -199,14 +199,14 @@ pub(super) fn insert_dummy_vertices(
 ) {
     // find all edges that have slack of greater than 0.
     // and insert dummy vertices
-    info!(target: "crossing_reduction", "Inserting dummy vertices for edges spanning more than {minimum_length} ranks");
+    info!(target: CROSSING_LOG_TARGET, "Inserting dummy vertices for edges spanning more than {minimum_length} ranks");
     for edge in graph.edge_indices().collect::<Vec<_>>() {
         if slack(graph, edge, minimum_length) > 0 {
             let (mut tail, head) = graph.edge_endpoints(edge).unwrap();
-            trace!(target: "crossing_reduction", 
-                "Inserting {} dummy vertices between: ({}, {})", 
-                graph[head].rank - graph[tail].rank - 1, 
-                tail.index(), 
+            trace!(target: CROSSING_LOG_TARGET,
+                "Inserting {} dummy vertices between: ({}, {})",
+                graph[head].rank - graph[tail].rank - 1,
+                tail.index(),
                 head.index());
 
             // we don't need to remember edges that where removed
@@ -240,7 +240,7 @@ pub(super) fn remove_dummy_vertices(
     // follow them until the other non dummy node is found
     // insert old edge
     // remove all dummy nodes
-    info!(target: "crossing_reduction", "Removing dummy vertices and inserting original edges.");
+    info!(target: CROSSING_LOG_TARGET, "Removing dummy vertices and inserting original edges.");
     let vertices = toposort(&*graph, None).unwrap();
     for v in vertices {
         let mut edges = Vec::new();
@@ -285,7 +285,7 @@ type CMMethod =
     fn(&StableDiGraph<Vertex, Edge>, NodeIndex, bool, &HashMap<NodeIndex, usize>) -> f64;
 
 fn init_order(graph: &StableDiGraph<Vertex, Edge>) -> Order {
-    info!(target: "crossing_reduction", 
+    info!(target: CROSSING_LOG_TARGET,
         "Initializing order of vertices in each rank via dfs.");
 
     fn dfs(
@@ -325,9 +325,9 @@ fn reduce_crossings_bilayer_sweep(
     cm_method: CMMethod,
     transpose: bool,
 ) -> Order {
-    info!(target: "crossing_reduction", "Reducing crossings via bilayer sweep");
+    info!(target: CROSSING_LOG_TARGET, "Reducing crossings via bilayer sweep");
     let mut best_crossings = order.crossings(graph);
-    debug!(target: "crossing_reduction", "Initial number of crossings: {best_crossings}");
+    debug!(target: CROSSING_LOG_TARGET, "Initial number of crossings: {best_crossings}");
     let mut last_best = 0;
     let mut best = order.clone();
     for i in 0.. {
@@ -336,17 +336,17 @@ fn reduce_crossings_bilayer_sweep(
             self::transpose(graph, &mut order, i % 2 == 0);
         }
         let crossings = order.crossings(graph);
-        trace!(target: "crossing_reduction", "Current number of crossings: {crossings}");
+        trace!(target: CROSSING_LOG_TARGET, "Current number of crossings: {crossings}");
         if crossings < best_crossings {
             best_crossings = crossings;
-            debug!(target: "crossing_reduction", "Lowest number of crossings so far: {best_crossings}");
+            debug!(target: CROSSING_LOG_TARGET, "Lowest number of crossings so far: {best_crossings}");
             best = order.clone();
             last_best = 0;
         } else {
             last_best += 1;
         }
         if last_best == 4 {
-            info!(target: "crossing_reduction", "Didn't improve after 4 sweeps, returning");
+            info!(target: CROSSING_LOG_TARGET, "Didn't improve after 4 sweeps, returning");
             return best;
         }
     }
@@ -354,7 +354,7 @@ fn reduce_crossings_bilayer_sweep(
 }
 
 fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: bool) {
-    trace!(target: "crossings_reduction", 
+    trace!(target: CROSSING_LOG_TARGET,
         "Using transpose, try to swap vertices in each layer manually to reduce cross count");
 
     let mut improved = true;
@@ -367,7 +367,7 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
     while improved {
         improved = false;
         for r in iterate(iter_dir, order.max_rank()) {
-            trace!(target: "reduce_crossings", "Transpose vertices in rank {r}");
+            trace!(target: CROSSING_LOG_TARGET, "Transpose vertices in rank {r}");
             for i in 0..order._inner[r].len() - 1 {
                 let v = order._inner[r][i];
                 let w = order._inner[r][i + 1];
@@ -379,7 +379,7 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
                 }
             }
         }
-        trace!(target: "reduce_crossings", "Did improve: {improved}");
+        trace!(target: CROSSING_LOG_TARGET, "Did improve: {improved}");
     }
 }
 
@@ -400,8 +400,8 @@ fn order_layer(
     };
 
     for rank in dir {
-        trace!(target: "crossing_reduction", "Updating order of vertices in rank {rank}");
-        trace!(target: "crossing_reduction", "Original order: {:?}",
+        trace!(target: CROSSING_LOG_TARGET, "Updating order of vertices in rank {rank}");
+        trace!(target: CROSSING_LOG_TARGET, "Original order: {:?}",
             cur_order[rank]
                 .iter()
                 .map(|v| v.index())
@@ -420,7 +420,7 @@ fn order_layer(
         new_order[rank].iter().enumerate().for_each(|(pos, v)| {
             positions.insert(*v, pos);
         });
-        trace!(target: "crossing_reduction", "Updated order : {:?}",
+        trace!(target: CROSSING_LOG_TARGET, "Updated order : {:?}",
             new_order[rank]
                 .iter()
                 .map(|v| v.index())

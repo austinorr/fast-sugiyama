@@ -5,7 +5,7 @@ use petgraph::{
     visit::EdgeRef,
 };
 
-use super::{Edge, Vertex};
+use super::{Edge, Vertex, CYCLE_LOG_TARGET};
 
 /// Removes all the edges that contribute to cycles in the graph
 /// Does so by finding a greedy feedback arc set and then reversing the
@@ -13,11 +13,11 @@ use super::{Edge, Vertex};
 /// Is not guaranteed to find the minimum fas.
 pub(crate) fn remove_cycles(graph: &mut StableDiGraph<Vertex, Edge>) -> Vec<EdgeIndex> {
     if !is_cyclic_directed(&*graph) {
-        info!(target: "Cycle Removal", "Graph contains no cycle");
+        info!(target: CYCLE_LOG_TARGET, "Graph contains no cycle");
         return Vec::new();
     }
 
-    info!(target: "Cycle Removal", "Graph contains cycle, reversing edges");
+    info!(target: CYCLE_LOG_TARGET, "Graph contains cycle, reversing edges");
 
     // get the feedback arc set
     let fas: Vec<EdgeIndex> = greedy_feedback_arc_set(&*graph).map(|e| e.id()).collect();
@@ -38,7 +38,7 @@ pub(crate) fn remove_cycles(graph: &mut StableDiGraph<Vertex, Edge>) -> Vec<Edge
 
     assert!(!is_cyclic_directed(&*graph));
 
-    debug!(target: "Cycle Removal", "Reversed {} edges", reversed_edges.len());
+    debug!(target: CYCLE_LOG_TARGET, "Reversed {} edges", reversed_edges.len());
 
     reversed_edges
 }

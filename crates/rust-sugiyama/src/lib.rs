@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use algorithm::{Edge, Vertex};
 
-use configure::Config;
+use configure::{Config, INIT_LOG_TARGET};
 use log::info;
 use petgraph::{graph::NodeIndex, stable_graph::StableDiGraph};
 
@@ -20,7 +20,7 @@ type Layouts<T> = Vec<(Vec<(T, (f64, f64))>, f64, f64)>;
 /// list of the vertex number (as specified in the edges) and its x and y
 /// position respectively.
 pub fn from_edges(edges: &[(u32, u32)], config: &Config) -> Layouts<usize> {
-    info!(target: "initializing", "Creating new layout from edges, containing {} edges", edges.len());
+    info!(target: INIT_LOG_TARGET, "Creating new layout from {} edges", edges.len());
     let graph = StableDiGraph::from_edges(edges);
     algorithm::start(graph, config)
 }
@@ -35,9 +35,9 @@ pub fn from_graph<V, E>(
     vertex_size: &impl Fn(NodeIndex, &V) -> (f64, f64),
     config: &Config,
 ) -> Layouts<NodeIndex> {
-    info!(target: "initializing", 
-        "Creating new layout from existing graph, containing {} vertices and {} edges.", 
-        graph.node_count(), 
+    info!(target: INIT_LOG_TARGET,
+        "Creating new layout from existing graph, containing {} vertices and {} edges.",
+        graph.node_count(),
         graph.edge_count());
 
     let graph = graph.map(
@@ -74,9 +74,9 @@ pub fn from_vertices_and_edges<'a>(
     edges: &'a [(u32, u32)],
     config: &Config,
 ) -> Layouts<usize> {
-    info!(target: "initializing", 
-        "Creating new layout from existing graph, containing {} vertices and {} edges.", 
-        vertices.len(), 
+    info!(target: INIT_LOG_TARGET,
+        "Creating new layout from existing graph, containing {} vertices and {} edges.",
+        vertices.len(),
         edges.len());
 
     let mut graph = StableDiGraph::new();
