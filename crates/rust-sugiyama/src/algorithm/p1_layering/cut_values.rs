@@ -2,12 +2,12 @@ use std::collections::VecDeque;
 
 use log::{debug, info, trace};
 use petgraph::{
+    Direction::{self, Incoming, Outgoing},
     stable_graph::{EdgeIndex, NodeIndex, StableDiGraph},
     visit::EdgeRef,
-    Direction::{self, Incoming, Outgoing},
 };
 
-use super::{Edge, Vertex, CUT_VAL_LOG_TARGET};
+use super::{CUT_VAL_LOG_TARGET, Edge, Vertex};
 
 #[derive(Debug)]
 struct NeighborhoodInfo {
@@ -198,14 +198,14 @@ mod tests {
     use petgraph::stable_graph::NodeIndex;
 
     use crate::algorithm::p1_layering::{
+        Edge,
         cut_values::{init_cutvalues, remove_outdated_cut_values, update_cutvalues},
         low_lim::init_low_lim,
         tests::{
-            GraphBuilder, CUT_VALUES_EXAMPLE_GRAPH_NEG_CUT_VALUE, EXAMPLE_GRAPH,
+            CUT_VALUES_EXAMPLE_GRAPH_NEG_CUT_VALUE, EXAMPLE_GRAPH,
             EXAMPLE_GRAPH_FEASIBLE_TREE_NEG_CUT_VALUE, EXAMPLE_GRAPH_FEASIBLE_TREE_POS_CUT_VALUE,
-            LOW_LIM_GRAPH, LOW_LIM_GRAPH_LOW_LIM_VALUES,
+            GraphBuilder, LOW_LIM_GRAPH, LOW_LIM_GRAPH_LOW_LIM_VALUES,
         },
-        Edge,
     };
 
     #[test]

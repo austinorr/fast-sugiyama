@@ -1,16 +1,16 @@
 use petgraph::{
+    Direction,
     stable_graph::{NodeIndex, StableDiGraph},
     visit::EdgeRef,
-    Direction,
 };
 use rust_sugiyama::{configure::Config, from_graph};
 use std::collections::HashMap;
 use svg::{
-    node::{
-        element::{Line, Rectangle, Text},
-        Comment,
-    },
     Document,
+    node::{
+        Comment,
+        element::{Line, Rectangle, Text},
+    },
 };
 
 fn main() {

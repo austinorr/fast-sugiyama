@@ -5,7 +5,7 @@ use petgraph::{
     visit::EdgeRef,
 };
 
-use super::{Edge, Vertex, CYCLE_LOG_TARGET};
+use super::{CYCLE_LOG_TARGET, Edge, Vertex};
 
 /// Removes all the edges that contribute to cycles in the graph
 /// Does so by finding a greedy feedback arc set and then reversing the

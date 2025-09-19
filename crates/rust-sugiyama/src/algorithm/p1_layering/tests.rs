@@ -339,9 +339,9 @@ mod integration {
     use crate::configure::{Config, RankingType};
     use petgraph::stable_graph::StableDiGraph;
 
-    use crate::algorithm::p1_layering::{rank, slack, Edge, Vertex};
+    use crate::algorithm::p1_layering::{Edge, Vertex, rank, slack};
 
-    use super::{GraphBuilder, EXAMPLE_GRAPH};
+    use super::{EXAMPLE_GRAPH, GraphBuilder};
 
     fn is_correct(graph: StableDiGraph<Vertex, Edge>, minimum_length: i32) -> bool {
         // all cut values must be positive,

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use log::{debug, info, trace};
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 
-use super::{Edge, Vertex, LOW_LIM_LOG_TARGET};
+use super::{Edge, LOW_LIM_LOG_TARGET, Vertex};
 
 pub(super) fn init_low_lim(graph: &mut StableDiGraph<Vertex, Edge>) {
     // start at arbitrary root node
@@ -71,16 +71,16 @@ mod tests {
     use petgraph::stable_graph::NodeIndex;
 
     use crate::algorithm::p1_layering::{
+        Vertex,
         low_lim::{init_low_lim, update_low_lim},
         tests::{
             EXAMPLE_GRAPH_FEASIBLE_TREE_POS_CUT_VALUE, EXAMPLE_GRAPH_LOW_LIM_VALUES_NEG_CUT_VALUE,
             LOW_LIM_GRAPH_AFTER_UPDATE, LOW_LIM_GRAPH_LOW_LIM_VALUES,
         },
-        Vertex,
     };
 
     use super::super::tests::{
-        GraphBuilder, EXAMPLE_GRAPH, EXAMPLE_GRAPH_FEASIBLE_TREE_NEG_CUT_VALUE, LOW_LIM_GRAPH,
+        EXAMPLE_GRAPH, EXAMPLE_GRAPH_FEASIBLE_TREE_NEG_CUT_VALUE, GraphBuilder, LOW_LIM_GRAPH,
     };
 
     fn phase_1_vertex(

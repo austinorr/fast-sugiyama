@@ -268,7 +268,7 @@ mod init_order {
     use crate::algorithm::p2_reduce_crossings::insert_dummy_vertices;
 
     use super::{
-        GraphBuilder, COMPLEX_EXAMPLE, COMPLEX_EXAMPLE_RANKS, ONE_DUMMY, ONE_DUMMY_RANKS,
+        COMPLEX_EXAMPLE, COMPLEX_EXAMPLE_RANKS, GraphBuilder, ONE_DUMMY, ONE_DUMMY_RANKS,
         THREE_DUMMIES, THREE_DUMMIES_RANKS,
     };
 
@@ -317,7 +317,7 @@ mod init_order {
 // TODO: Add new tests for Order crosscount
 #[cfg(test)]
 mod order {
-    use crate::algorithm::{p2::order_layer, p2_reduce_crossings::Order, Edge, Vertex};
+    use crate::algorithm::{Edge, Vertex, p2::order_layer, p2_reduce_crossings::Order};
     use petgraph::stable_graph::StableDiGraph;
 
     /// Shorthand for creating a default vertex with a specified rank.
