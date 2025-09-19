@@ -16,19 +16,16 @@
 //!
 //! See the submodules for each phase for more details on the implementation
 //! and references used.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
-use log::{debug, info};
-use petgraph::{
-    stable_graph::{EdgeIndex, NodeIndex, StableDiGraph},
-    Direction,
-};
+use log::{debug, info, warn};
+use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 
 use crate::configure::{
-    Config, CrossingMinimization, RankingType, COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET,
-    INIT_LOG_TARGET, LAYOUT_LOG_TARGET,
+    COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
+    LAYOUT_LOG_TARGET, RankingType,
 };
-use crate::{util::weakly_connected_components, Layout, Layouts};
+use crate::{Layout, Layouts, util::weakly_connected_components};
 use p0_cycle_removal as p0;
 use p1_layering as p1;
 use p2_reduce_crossings as p2;
@@ -134,34 +131,6 @@ fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layo
     info!(target: LAYOUT_LOG_TARGET, "Start building layout");
     info!(target: LAYOUT_LOG_TARGET, "Configuration is: {:?}", config);
 
-    // Count nodes with an out-degree of zero (roots)
-    let nroots = graph
-        .node_indices()
-        .filter(|&node_idx| {
-            graph
-                .neighbors_directed(node_idx, Direction::Outgoing)
-                .count()
-                == 0
-        })
-        .count();
-
-    // Count nodes with an in-degree of zero (leaves)
-    let nleaves = graph
-        .node_indices()
-        .filter(|&node_idx| {
-            graph
-                .neighbors_directed(node_idx, Direction::Incoming)
-                .count()
-                == 0
-        })
-        .count();
-
-    let reverse = nleaves < nroots; // works better advancing towards roots than towards leaves
-
-    if reverse {
-        graph.reverse();
-    }
-
     // Treat the vertex spacing as just additional padding in each node. Each node will then take
     // 50% of the "responsibility" of the vertex spacing. This does however mean that dummy vertices
     // will have a gap of 50% of the vertex spacing between them and the next and previous vertex.
@@ -188,7 +157,7 @@ fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layo
         config.transpose,
     );
 
-    let layout = execute_phase_3(&mut graph, layers, reverse);
+    let layout = execute_phase_3(&mut graph, layers);
     debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,
@@ -241,7 +210,6 @@ fn execute_phase_2(
 fn execute_phase_3(
     graph: &mut StableDiGraph<Vertex, Edge>,
     mut layers: Vec<Vec<NodeIndex>>,
-    reverse: bool,
 ) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 3: Coordinate Calculation");
     for n in graph.node_indices().collect::<Vec<_>>() {
@@ -300,21 +268,6 @@ fn execute_phase_3(
         .max_by(|a, b| a.total_cmp(b))
         .unwrap();
 
-    // flip y by default to match `dot` program convention with
-    // directions trending downward
-    let mut flip_y = -1.0;
-    let mut yoff = height;
-
-    if reverse {
-        // earlier we reversed the edge directions to get a better layout
-        // but we don't want to flip it since the edge direction should already
-        // trend downward
-        flip_y = 1.0;
-        yoff = 0.0;
-    }
-
-    let mut v = x_coordinates.iter().collect::<Vec<_>>();
-    v.sort_by(|a, b| a.0.index().cmp(&b.0.index()));
     // format to NodeIndex: (x, y), width, height
     (
         x_coordinates
@@ -326,7 +279,9 @@ fn execute_phase_3(
                     graph[v].id,
                     (
                         x,
-                        *rank_to_y_offset.get(&graph[v].rank).unwrap() * flip_y + yoff,
+                        // flip y by default to match `dot` program convention with
+                        // directions trending downward
+                        *rank_to_y_offset.get(&graph[v].rank).unwrap() * -1.0 + height,
                     ),
                 )
             })

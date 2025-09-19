@@ -19,13 +19,13 @@ use log::info;
 use petgraph::stable_graph::{EdgeIndex, StableDiGraph};
 use petgraph::visit::IntoNodeIdentifiers;
 
-use crate::configure::{RankingType, CUT_VAL_LOG_TARGET, LOW_LIM_LOG_TARGET, RANKING_LOG_TARGET};
+use crate::configure::{CUT_VAL_LOG_TARGET, LOW_LIM_LOG_TARGET, RANKING_LOG_TARGET, RankingType};
 
 use self::cut_values::update_cutvalues;
 use self::low_lim::update_low_lim;
 use self::ranking::{feasible_tree, init_rank, move_vertices_down, move_vertices_up, update_ranks};
 
-use super::{slack, Edge, Vertex};
+use super::{Edge, Vertex, slack};
 
 pub(super) fn rank(
     graph: &mut StableDiGraph<Vertex, Edge>,
@@ -62,10 +62,10 @@ fn original(graph: &mut StableDiGraph<Vertex, Edge>, minimum_length: i32) {
 
 fn leave_edge(graph: &StableDiGraph<Vertex, Edge>) -> Option<EdgeIndex> {
     for edge in graph.edge_indices() {
-        if let Some(cut_value) = graph[edge].cut_value {
-            if cut_value < 0 {
-                return Some(edge);
-            }
+        if let Some(cut_value) = graph[edge].cut_value
+            && cut_value < 0
+        {
+            return Some(edge);
         }
     }
     None

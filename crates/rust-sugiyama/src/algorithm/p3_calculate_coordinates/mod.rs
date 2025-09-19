@@ -3,12 +3,12 @@ mod tests;
 
 use std::collections::HashMap;
 
-use log::info;
+use log::{debug, info, trace};
+use petgraph::Direction::Incoming;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::visit::EdgeRef;
-use petgraph::Direction::Incoming;
 
-use super::{slack, Edge, Vertex, COORD_CALC_LOG_TARGET};
+use super::{COORD_CALC_LOG_TARGET, Edge, Vertex, slack};
 
 pub(super) fn create_layouts(
     graph: &mut StableDiGraph<Vertex, Edge>,
@@ -66,7 +66,7 @@ pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<Node
     let min_width = min_max
         .iter()
         .enumerate()
-        .min_by(|a, b| a.1 .2.total_cmp(&b.1 .2))
+        .min_by(|(_, (_, _, width_a)), (_, (_, _, width_b))| width_a.total_cmp(width_b))
         .unwrap()
         .0;
 
@@ -95,19 +95,21 @@ pub(crate) fn calculate_relative_coords(
         let mut v = l.iter().collect::<Vec<_>>();
         v.sort_by(|a, b| a.0.index().cmp(&b.0.index()));
         // format to NodeIndex: (x, y), width, height
-        // println!("{v:?}\n");
     }
     let mut sorted_layouts = HashMap::new();
     for k in aligned_layouts.first().unwrap().keys() {
         let mut vertex_coordinates = [
-            *aligned_layouts.first().unwrap().get(k).unwrap(),
-            *aligned_layouts.get(1).unwrap().get(k).unwrap(),
-            *aligned_layouts.get(2).unwrap().get(k).unwrap(),
-            *aligned_layouts.get(3).unwrap().get(k).unwrap(),
+            *aligned_layouts[0].get(k).unwrap(),
+            *aligned_layouts[1].get(k).unwrap(),
+            *aligned_layouts[2].get(k).unwrap(),
+            *aligned_layouts[3].get(k).unwrap(),
         ];
         vertex_coordinates.sort_by(|a, b| a.total_cmp(b));
         sorted_layouts.insert(k, vertex_coordinates);
+        trace!(target: COORD_CALC_LOG_TARGET, "vertex {k:?} candidate coordinates: {vertex_coordinates:?}");
     }
+
+    debug!(target: COORD_CALC_LOG_TARGET, "Sorted Layouts: {sorted_layouts:?}");
 
     // create final layout, by averaging the two median values
     // try to use something like mean
@@ -287,10 +289,8 @@ fn do_horizontal_compaction(
 
     // calculate absolute x-coordinates
     for v in graph.node_indices() {
-        x_coordinates.insert(
-            v,
-            *x_coordinates.get(&v).unwrap() + graph[graph[v].sink].shift,
-        );
+        let x = *x_coordinates.get(&v).unwrap() + graph[graph[v].sink].shift;
+        x_coordinates.insert(v, x);
     }
     x_coordinates
 }

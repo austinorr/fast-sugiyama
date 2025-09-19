@@ -5,14 +5,14 @@ use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
 
 use log::{debug, info, trace};
+use petgraph::Direction::{Incoming, Outgoing};
 use petgraph::algo::toposort;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
-use petgraph::Direction::{Incoming, Outgoing};
 
-use crate::configure::{CrossingMinimization, CROSSING_LOG_TARGET};
-use crate::util::{iterate, radix_sort, IterDir};
+use crate::configure::{CROSSING_LOG_TARGET, CrossingMinimization};
+use crate::util::{IterDir, iterate, radix_sort};
 
-use super::{slack, Edge, Vertex};
+use super::{Edge, Vertex, slack};
 
 #[derive(Clone)]
 struct Order {
@@ -414,7 +414,7 @@ fn order_layer(
             .iter()
             .map(|n| (*n, cm_method(graph, *n, move_down, &positions)))
             .collect::<HashMap<NodeIndex, f64>>();
-
+        trace!(target: CROSSING_LOG_TARGET, "Ordering: {ordering:?}" );
         new_order[rank].sort_by(|a, b| ordering.get(a).partial_cmp(&ordering.get(b)).unwrap());
 
         new_order[rank].iter().enumerate().for_each(|(pos, v)| {
@@ -455,8 +455,11 @@ fn barycenter(
         .map(|n| *positions.get(&n).unwrap())
         .collect::<Vec<usize>>();
 
-    let bary = adjacent.iter().sum::<usize>() as f64 / adjacent.len() as f64;
-    bary
+    if !adjacent.is_empty() {
+        adjacent.iter().sum::<usize>() as f64 / adjacent.len() as f64
+    } else {
+        0.0
+    }
 }
 
 fn median(
@@ -465,13 +468,14 @@ fn median(
     move_down: bool,
     positions: &HashMap<NodeIndex, usize>,
 ) -> f64 {
-    let neighbors = if move_down {
-        graph.neighbors_directed(vertex, Incoming)
+    let neighbors: Vec<_> = if move_down {
+        graph.neighbors_directed(vertex, Incoming).collect()
     } else {
-        graph.neighbors_directed(vertex, Outgoing)
+        graph.neighbors_directed(vertex, Outgoing).collect()
     };
     // Only look at direct neighbors
     let mut adjacent = neighbors
+        .into_iter()
         .filter(|n| graph[vertex].rank.abs_diff(graph[*n].rank) == 1)
         .map(|n| *positions.get(&n).unwrap())
         .collect::<Vec<_>>();
@@ -489,6 +493,12 @@ fn median(
     } else {
         let left = adjacent[m - 1] - adjacent[0];
         let right = adjacent[length_p - 1] - adjacent[m];
-        (adjacent[m - 1] * right + adjacent[m] * left) as f64 / (left + right) as f64
+        let denom = left + right;
+        if denom != 0 {
+            (adjacent[m - 1] * right + adjacent[m] * left) as f64 / denom as f64
+        } else {
+            trace!(target: CROSSING_LOG_TARGET, "Computing Median divided by zero. adjacent {adjacent:?}");
+            0.0
+        }
     }
 }

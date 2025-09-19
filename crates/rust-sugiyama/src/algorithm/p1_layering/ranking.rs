@@ -2,12 +2,12 @@ use std::collections::{HashSet, VecDeque};
 
 use log::{debug, info, trace};
 use petgraph::{
-    stable_graph::{EdgeIndex, NodeIndex, StableDiGraph},
     Direction::{self, Incoming, Outgoing},
+    stable_graph::{EdgeIndex, NodeIndex, StableDiGraph},
 };
 
 use super::{
-    cut_values::init_cutvalues, low_lim::init_low_lim, slack, Edge, Vertex, RANKING_LOG_TARGET,
+    Edge, RANKING_LOG_TARGET, Vertex, cut_values::init_cutvalues, low_lim::init_low_lim, slack,
 };
 
 #[allow(dead_code)]
@@ -108,7 +108,7 @@ pub(super) fn update_ranks(graph: &mut StableDiGraph<Vertex, Edge>, minimum_leng
 }
 
 /// Builds a tight tree via depth first search
-/// Returns the number of verticees contained in the tree
+/// Returns the number of vertices contained in the tree
 fn tight_tree(
     graph: &mut StableDiGraph<Vertex, Edge>,
     vertex: NodeIndex,
@@ -147,7 +147,7 @@ fn tight_tree(
 pub(crate) fn init_rank(graph: &mut StableDiGraph<Vertex, Edge>, minimum_length: i32) {
     // Sort nodes topologically so we don't need to verify that we've assigned
     // a rank to all incoming neighbors
-    // assume graphs contain no circles for now
+    // assume graphs contain no cycles for now
     info!(target: RANKING_LOG_TARGET, "Initializing ranks via topological sort.");
     for v in petgraph::algo::toposort(&*graph, None).unwrap() {
         let rank = graph
@@ -221,7 +221,7 @@ mod tests {
     };
 
     use super::{
-        super::tests::{GraphBuilder, EXAMPLE_GRAPH},
+        super::tests::{EXAMPLE_GRAPH, GraphBuilder},
         init_rank, update_ranks,
     };
 
