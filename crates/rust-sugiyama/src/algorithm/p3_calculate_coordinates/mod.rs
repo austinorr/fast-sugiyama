@@ -4,11 +4,11 @@ mod tests;
 use std::collections::HashMap;
 
 use log::{debug, info, trace};
-use petgraph::Direction::Incoming;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::visit::EdgeRef;
+use petgraph::Direction::Incoming;
 
-use super::{COORD_CALC_LOG_TARGET, Edge, Vertex, slack};
+use super::{slack, Edge, Vertex, COORD_CALC_LOG_TARGET};
 
 pub(super) fn create_layouts(
     graph: &mut StableDiGraph<Vertex, Edge>,
@@ -115,9 +115,15 @@ pub(crate) fn calculate_relative_coords(
     // try to use something like mean
     sorted_layouts
         .into_iter()
-        // "the average median is both order and separation preserving" [Brandes & Kopf, 2001]
-        .map(|(k, v)| (*k, (v[1] + v[2]) / 2.0))
+        // .map(|(k, v)| (*k, (v[0] + v[1] + v[2] + v[3]) / 4.0))
+        // "the average median is order and separation preserving" [Brandes & Kopf, 2001]
+        .map(|(k, v)| (*k, avg_median4(v)))
         .collect::<Vec<_>>()
+}
+
+#[inline(always)]
+fn avg_median4(v: [f64; 4]) -> f64 {
+    (v[1] + v[2]) / 2.0
 }
 
 fn is_incident_to_inner_segment(graph: &StableDiGraph<Vertex, Edge>, id: NodeIndex) -> bool {
