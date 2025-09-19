@@ -11,6 +11,7 @@ pub const RANKING_TYPE_DEFAULT: RankingType = RankingType::MinimizeEdgeLength;
 pub const C_MINIMIZATION_DEFAULT: CrossingMinimization = CrossingMinimization::Barycenter;
 pub const TRANSPOSE_DEFAULT: bool = true;
 pub const DUMMY_SIZE_DEFAULT: f64 = 1.0;
+pub const CHECK_LAYOUT_DEFAULT: bool = true;
 
 const ENV_MINIMUM_LENGTH: &str = "RUST_GRAPH_MIN_LEN";
 const ENV_VERTEX_SPACING: &str = "RUST_GRAPH_V_SPACING";
@@ -19,6 +20,7 @@ const ENV_RANKING_TYPE: &str = "RUST_GRAPH_R_TYPE";
 const ENV_CROSSING_MINIMIZATION: &str = "RUST_GRAPH_CROSS_MIN";
 const ENV_TRANSPOSE: &str = "RUST_GRAPH_TRANSPOSE";
 const ENV_DUMMY_SIZE: &str = "RUST_GRAPH_DUMMY_SIZE";
+const ENV_CHECK_LAYOUT: &str = "RUST_GRAPH_CHECK_VALID";
 
 pub(crate) const INIT_LOG_TARGET: &str = "rust-sugiyama.initialization";
 pub(crate) const LAYOUT_LOG_TARGET: &str = "rust-sugiyama.layouting";
@@ -68,6 +70,8 @@ pub struct Config {
     /// Whether to attempt to further reduce crossings by swapping vertices in a
     /// layer. This may increase runtime significantly.
     pub transpose: bool,
+    /// Whether to check that the layout is valid i.e., no duplicated coordinates.
+    pub check_layout: bool,
 }
 
 impl Config {
@@ -77,13 +81,14 @@ impl Config {
     ///
     /// | ENV | values | default | description |
     /// | --- | ------ | ------- | ----------- |
-    /// | RUST_GRAPH_MIN_LEN    | integer, > 0         | 1          | minimum edge length between layers |
-    /// | RUST_GRAPH_V_SPACING  | integer, > 0         | 10         | minimum spacing between vertices on the same layer |
-    /// | RUST_GRAPH_DUMMIES    | y \| n               | y          | if dummy vertices are included in the final layout |
-    /// | RUST_GRAPH_R_TYPE     | original \| minimize \| up \| down | minimize   | defines how vertices are places vertically |
-    /// | RUST_GRAPH_CROSS_MIN  | barycenter \| median | barycenter | which heuristic to use for crossing reduction |
-    /// | RUST_GRAPH_TRANSPOSE  | y \| n               | y          | if transpose function is used to further try to reduce crossings (may increase runtime significally for large graphs) |
-    /// | RUST_GRAPH_DUMMY_SIZE | float, 1 >= v > 0    | 1.0        |size of dummy vertices in final layout, if dummy vertices are included. this will squish the graph horizontally |
+    /// | RUST_GRAPH_MIN_LEN      | integer, > 0         | 1          | minimum edge length between layers |
+    /// | RUST_GRAPH_V_SPACING    | integer, > 0         | 10         | minimum spacing between vertices on the same layer |
+    /// | RUST_GRAPH_DUMMIES      | y \| n               | y          | if dummy vertices are included in the final layout |
+    /// | RUST_GRAPH_R_TYPE       | original \| minimize \| up \| down | minimize   | defines how vertices are places vertically |
+    /// | RUST_GRAPH_CROSS_MIN    | barycenter \| median | barycenter | which heuristic to use for crossing reduction |
+    /// | RUST_GRAPH_TRANSPOSE    | y \| n               | y          | if transpose function is used to further try to reduce crossings (may increase runtime significally for large graphs) |
+    /// | RUST_GRAPH_DUMMY_SIZE   | float, 1 >= v > 0    | 1.0        | size of dummy vertices in final layout, if dummy vertices are included. this will squish the graph horizontally |
+    /// | RUST_GRAPH_CHECK_LAYOUT | y \| n               | y          | check if the layout is valid |
     pub fn new_from_env() -> Self {
         let mut config = Self::default();
 
@@ -119,6 +124,8 @@ impl Config {
 
         read_env!(config.transpose, parse_bool, ENV_TRANSPOSE);
 
+        read_env!(config.check_layout, parse_bool, ENV_CHECK_LAYOUT);
+
         config
     }
 }
@@ -133,6 +140,7 @@ impl Default for Config {
             c_minimization: C_MINIMIZATION_DEFAULT,
             transpose: TRANSPOSE_DEFAULT,
             dummy_size: DUMMY_SIZE_DEFAULT,
+            check_layout: CHECK_LAYOUT_DEFAULT,
         }
     }
 }
@@ -218,6 +226,7 @@ fn from_env_all_valid() {
         env::set_var(ENV_CROSSING_MINIMIZATION, "median");
         env::set_var(ENV_TRANSPOSE, "n");
         env::set_var(ENV_VERTEX_SPACING, "20");
+        env::set_var(ENV_CHECK_LAYOUT, "y");
     }
     let cfg = Config::new_from_env();
     assert_eq!(cfg.minimum_length, 5);
@@ -227,6 +236,7 @@ fn from_env_all_valid() {
     assert_eq!(cfg.c_minimization, CrossingMinimization::Median);
     assert!(!cfg.transpose);
     assert_eq!(cfg.vertex_spacing, 20.0);
+    assert!(cfg.check_layout);
 }
 
 #[test]

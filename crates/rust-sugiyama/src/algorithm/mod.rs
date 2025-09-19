@@ -16,22 +16,25 @@
 //!
 //! See the submodules for each phase for more details on the implementation
 //! and references used.
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
-use log::{debug, info, warn};
+use log::{debug, info};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 
 use crate::configure::{
     COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
     LAYOUT_LOG_TARGET, RankingType,
 };
-use crate::{Layout, Layouts, util::weakly_connected_components};
+use crate::{
+    Layout, Layouts,
+    util::{layout_is_valid, weakly_connected_components},
+};
 use p0_cycle_removal as p0;
 use p1_layering as p1;
 use p2_reduce_crossings as p2;
 use p3_calculate_coordinates as p3;
 
-use self::p3_calculate_coordinates::VDir;
+use p3::VDir;
 
 mod p0_cycle_removal;
 mod p1_layering;
@@ -110,7 +113,14 @@ pub(super) fn start(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> 
     init_graph(&mut graph);
     weakly_connected_components(graph)
         .into_iter()
-        .map(|g| build_layout(g, config))
+        .map(|g| {
+            let (layout, w, h) = build_layout(g, config);
+            if config.check_layout {
+                assert!(layout_is_valid(&layout))
+            }
+
+            (layout, w, h)
+        })
         .collect()
 }
 
@@ -217,11 +227,22 @@ fn execute_phase_3(
             graph[n].id = n.index();
         }
     }
-    let _width = layers.iter().map(|l| l.len()).max().unwrap_or(0) as f64;
-    let _height = layers.len() as f64;
+
     let mut layouts = p3::create_layouts(graph, &mut layers);
 
     p3::align_to_smallest_width_layout(&mut layouts);
+
+    debug!(target: LAYOUT_LOG_TARGET, "Debug 4 layouts: {:?}", layouts
+        .iter()
+        .map(|layout| {
+            layout
+                .iter()
+                .filter(|(v, _)| !graph[**v].is_dummy)
+                .map(|(v, x)| (graph[*v].id, (*x, graph[*v].rank as f64)))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>());
+
     let mut x_coordinates = p3::calculate_relative_coords(layouts);
     // determine the smallest x-coordinate
     let min = x_coordinates
@@ -258,7 +279,7 @@ fn execute_phase_3(
     // since this has already been shifted to be > 0, the max == width
     let width = x_coordinates
         .iter()
-        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .max_by(|(_, ax), (_, bx)| ax.total_cmp(bx))
         .unwrap()
         .1;
 
