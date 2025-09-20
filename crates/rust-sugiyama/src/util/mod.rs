@@ -59,27 +59,6 @@ fn component_dfs<V: Copy, E: Copy>(
     visited
 }
 
-pub(crate) fn has_duplicates<T: Eq + std::hash::Hash>(vec: &[T]) -> bool {
-    let mut seen = HashSet::new();
-    for item in vec {
-        let is_new = seen.insert(item);
-        if !is_new {
-            return true; // Found a duplicate
-        }
-    }
-    false // No duplicates found
-}
-
-pub(crate) fn layout_is_valid(layout: &[(usize, (f64, f64))]) -> bool {
-    let rank_scale = 2_i64.pow(31) as f64; // make space to concat x & y into an i64
-    let xs = layout
-        .iter()
-        .map(|(_s, (x, y))| (y * rank_scale + x * 100.0).round() as i64)
-        .collect::<Vec<_>>();
-
-    !has_duplicates(&xs)
-}
-
 #[test]
 fn into_weakly_connected_components_two_components() {
     let g = StableDiGraph::<usize, usize>::from_edges([(0, 1), (1, 2), (3, 2), (4, 5), (4, 6)]);

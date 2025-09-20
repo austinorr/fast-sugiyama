@@ -16,7 +16,7 @@
 //!
 //! See the submodules for each phase for more details on the implementation
 //! and references used.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use log::{debug, info};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
@@ -25,10 +25,7 @@ use crate::configure::{
     COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
     LAYOUT_LOG_TARGET, RankingType,
 };
-use crate::{
-    Layout, Layouts,
-    util::{layout_is_valid, weakly_connected_components},
-};
+use crate::{Layout, Layouts, util::weakly_connected_components};
 use p0_cycle_removal as p0;
 use p1_layering as p1;
 use p2_reduce_crossings as p2;
@@ -201,12 +198,6 @@ fn execute_phase_2(
     transpose: bool,
 ) -> Vec<Vec<NodeIndex>> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 2: Crossing Reduction");
-    info!(target: LAYOUT_LOG_TARGET,
-        "dummy vertex size: {:?}, heuristic for crossing minimization: {:?}, using transpose: {}",
-        dummy_size,
-        crossing_minimization,
-        transpose
-    );
 
     p2::insert_dummy_vertices(graph, minimum_length, dummy_size.unwrap_or(0.0));
     let mut order = p2::ordering(graph, crossing_minimization, transpose);
@@ -281,13 +272,15 @@ fn execute_phase_3(
         .iter()
         .max_by(|(_, ax), (_, bx)| ax.total_cmp(bx))
         .unwrap()
-        .1;
+        .1
+        .max(1.0);
 
     // since vertices all share ranks, this is faster than taking the max y coordinate.
-    let height = *rank_to_y_offset
+    let height = rank_to_y_offset
         .values()
         .max_by(|a, b| a.total_cmp(b))
-        .unwrap();
+        .unwrap()
+        .max(1.0);
 
     // format to NodeIndex: (x, y), width, height
     (
@@ -315,6 +308,27 @@ fn execute_phase_3(
 fn slack(graph: &StableDiGraph<Vertex, Edge>, edge: EdgeIndex, minimum_length: i32) -> i32 {
     let (tail, head) = graph.edge_endpoints(edge).unwrap();
     graph[head].rank - graph[tail].rank - minimum_length
+}
+
+fn has_duplicates<T: Eq + std::hash::Hash>(vec: &[T]) -> bool {
+    let mut seen = HashSet::new();
+    for item in vec {
+        let is_new = seen.insert(item);
+        if !is_new {
+            return true; // Found a duplicate
+        }
+    }
+    false // No duplicates found
+}
+
+fn layout_is_valid(layout: &[(usize, (f64, f64))]) -> bool {
+    let rank_scale = 2_i64.pow(31) as f64; // make space to pack x & y into an i64
+    let xs = layout
+        .iter()
+        .map(|(_s, (x, y))| (y * rank_scale + x * 100.0).round() as i64)
+        .collect::<Vec<_>>();
+
+    !has_duplicates(&xs)
 }
 
 #[allow(dead_code)]
