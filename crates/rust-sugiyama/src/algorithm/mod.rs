@@ -243,15 +243,16 @@ fn execute_phase_3(
 
     let mut x_coordinates = p3::calculate_relative_coords(layouts);
     // determine the smallest x-coordinate
-    let min = x_coordinates
+    let (xmin, xmax) = x_coordinates
         .iter()
-        .min_by(|a, b| a.1.total_cmp(&b.1))
-        .unwrap()
-        .1;
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), (_, x)| {
+            (min.min(*x), max.max(*x))
+        });
+    let width = (xmax - xmin).max(1.0);
 
     // shift all coordinates so the minimum coordinate is 0
     for (_, c) in &mut x_coordinates {
-        *c -= min;
+        *c -= xmin;
     }
 
     // Find max y size in each rank. Use a BTreeMap so iteration through the map
@@ -274,22 +275,13 @@ fn execute_phase_3(
         current_rank_top_offset += max_height;
     }
 
-    // since this has already been shifted to be > 0, the max == width
-    let width = x_coordinates
-        .iter()
-        .max_by(|(_, ax), (_, bx)| ax.total_cmp(bx))
-        .unwrap()
-        .1
-        .max(1.0);
-
     // since vertices all share ranks, this is faster than taking the max y coordinate.
     let height = rank_to_y_offset
         .values()
-        .max_by(|a, b| a.total_cmp(b))
-        .unwrap()
+        .fold(f64::NEG_INFINITY, |acc, y| acc.max(*y))
         .max(1.0);
 
-    // format to NodeIndex: (x, y), width, height
+    // format to (usize, (x, y)), width, height, Some(edge_list) || None
     (
         x_coordinates
             .into_iter()
