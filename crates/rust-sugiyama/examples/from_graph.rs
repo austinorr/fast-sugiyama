@@ -40,8 +40,14 @@ fn main() {
         },
     )
     .into_iter()
-    .map(|(layout, width, height)| {
-        println!("{}", create_svg(&g, &layout, 15.0, 25.0, (10.0, 10.0)));
+    .map(|(layout, width, height, _)| {
+        let svg = create_svg(&g, &layout, 15.0, 25.0, (10.0, 10.0));
+        // println!("{svg}");
+        let mut file = std::fs::File::create("./graph.svg").expect("Unable to create file");
+        use std::io::Write;
+        // Write the content (as bytes) to the file
+        file.write_all(svg.as_bytes())
+            .expect("Unable to write data");
 
         let mut new_layout = HashMap::new();
         for (id, coords) in layout {
@@ -67,33 +73,23 @@ fn create_svg(
     padding: (f64, f64),
 ) -> String {
     // Figure out the extents of the SVG.
-    let node_size = |idx: NodeIndex| {
-        (
-            graph.node_weight(idx).unwrap().len() as f64 * character_width,
-            node_height,
-        )
-    };
-    let f64_cmp = |a: &f64, b: &f64| a.partial_cmp(b).unwrap();
-    let min_x = layout
+    let node_size = |idx: NodeIndex| (graph[idx].len() as f64 * character_width, node_height);
+
+    let (min_x, max_x, min_y, max_y) = layout
         .iter()
-        .map(|(idx, (x, _))| *x - node_size(*idx).0 * 0.5)
-        .min_by(f64_cmp)
-        .unwrap();
-    let max_x = layout
-        .iter()
-        .map(|(idx, (x, _))| *x + node_size(*idx).0 * 0.5)
-        .max_by(f64_cmp)
-        .unwrap();
-    let min_y = layout
-        .iter()
-        .map(|(idx, (_, y))| *y - node_size(*idx).1 * 0.5)
-        .min_by(f64_cmp)
-        .unwrap();
-    let max_y = layout
-        .iter()
-        .map(|(idx, (_, y))| *y + node_size(*idx).1 * 0.5)
-        .max_by(f64_cmp)
-        .unwrap();
+        .map(|(idx, (x, y))| {
+            let (w, h) = node_size(*idx);
+            (*x - w * 0.5, *x + w * 0.5, *y - h * 0.5, *y + h * 0.5)
+        })
+        .fold(
+            (
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |acc, (x1, x2, y1, y2)| (acc.0.min(x1), acc.1.max(x2), acc.2.min(y1), acc.3.max(y2)),
+        );
 
     let mut document = Document::new()
         .set("width", max_x - min_x + 2.0 * padding.0)
@@ -103,11 +99,14 @@ fn create_svg(
 
     // Generate a line for each edge in the graph.
     for (idx, pos) in layout {
-        let vertex_name = graph.node_weight(*idx).unwrap();
+        let vertex_name = &graph[*idx];
         for e in graph.edges_directed(*idx, Direction::Outgoing) {
             let other_vertex_index = e.target();
-            let other_vertex_name = graph.node_weight(other_vertex_index).unwrap();
-            let (_, other_vertex_pos) = layout.iter().find(|e| e.0 == other_vertex_index).unwrap();
+            let other_vertex_name = &graph[other_vertex_index];
+            let (_, other_vertex_pos) = layout
+                .iter()
+                .find(|(n, _)| *n == other_vertex_index)
+                .unwrap();
 
             let line = Line::new()
                 .set("x1", pos.0 + origin.0)
@@ -124,7 +123,7 @@ fn create_svg(
 
     // Generate a rectangle for each edge in the graph.
     for (idx, pos) in layout {
-        let vertex_name = graph.node_weight(*idx).unwrap();
+        let vertex_name = &graph[*idx];
 
         let size = (vertex_name.len() as f64 * character_width, node_height);
 
