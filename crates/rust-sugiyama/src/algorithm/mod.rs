@@ -164,7 +164,7 @@ fn build_layout(
     let layers = execute_phase_2(
         graph,
         config.minimum_length as i32,
-        config.dummy_vertices.then_some(config.dummy_size),
+        (config.dummy_vertices || config.dummy_size > 0.0).then_some(config.dummy_size),
         config.c_minimization,
         config.transpose,
     );
