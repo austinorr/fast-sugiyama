@@ -35,7 +35,7 @@ fn main() {
         },
     );
 
-    for (layout, width, height) in layouts {
+    for (layout, width, height, _) in layouts {
         println!("Coordinates: {:?}", layout);
         println!("width: {width}, height: {height}");
     }

@@ -10,7 +10,8 @@ mod algorithm;
 pub mod configure;
 mod util;
 
-pub type Layout<T> = (Vec<(T, (f64, f64))>, f64, f64);
+pub type Positions<T> = Vec<(T, (f64, f64))>;
+pub type Layout<T> = (Positions<T>, f64, f64, Option<Vec<(T, T)>>);
 pub type Layouts<T> = Vec<Layout<T>>;
 
 /// Creates a graph layout from edges, which are given as a `&[(u32, u32)]`.
@@ -47,13 +48,19 @@ pub fn from_graph<V, E>(
 
     algorithm::start(&graph, config)
         .into_iter()
-        .map(|(l, w, h)| {
+        .map(|(l, w, h, e)| {
             (
                 l.into_iter()
                     .map(|(id, coords)| (NodeIndex::from(id as u32), coords))
                     .collect(),
                 w,
                 h,
+                e.map(|edges| {
+                    edges
+                        .into_iter()
+                        .map(|(s, t)| (NodeIndex::new(s), NodeIndex::new(t)))
+                        .collect()
+                }),
             )
         })
         .collect()
@@ -279,7 +286,7 @@ mod check_visuals {
             (7, 9),
             (8, 9),
         ];
-        let (layout, width, height) = &mut from_edges(&edges, &Config::default())[0];
+        let (layout, width, height, _) = &mut from_edges(&edges, &Config::default())[0];
         layout.sort_by(|a, b| a.0.cmp(&b.0));
 
         assert_eq!(*width, 30.0);

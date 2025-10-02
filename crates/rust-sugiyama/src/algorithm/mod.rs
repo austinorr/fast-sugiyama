@@ -20,6 +20,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use log::{debug, info};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
+use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
 use crate::configure::{
     COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
@@ -111,12 +112,12 @@ pub(super) fn start(graph: &StableDiGraph<Vertex, Edge>, config: &Config) -> Lay
         .into_iter()
         .map(|mut g| {
             init_graph(&mut g);
-            let (layout, w, h) = build_layout(&mut g, config);
+            let (positions, w, h, edges) = build_layout(&mut g, config);
             if config.check_layout {
-                assert!(layout_is_valid(&layout))
+                assert!(layout_is_valid(&positions))
             }
 
-            (layout, w, h)
+            (positions, w, h, edges)
         })
         .collect()
 }
@@ -160,7 +161,7 @@ fn build_layout(graph: &mut StableDiGraph<Vertex, Edge>, config: &Config) -> Lay
         config.transpose,
     );
 
-    let layout = execute_phase_3(graph, layers);
+    let layout = execute_phase_3(graph, layers, config.dummy_vertices);
     debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,
@@ -207,6 +208,7 @@ fn execute_phase_2(
 fn execute_phase_3(
     graph: &mut StableDiGraph<Vertex, Edge>,
     mut layers: Vec<Vec<NodeIndex>>,
+    dummy_vertices: bool,
 ) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 3: Coordinate Calculation");
     for n in graph.node_indices().collect::<Vec<_>>() {
@@ -282,7 +284,7 @@ fn execute_phase_3(
     (
         x_coordinates
             .into_iter()
-            .filter(|(v, _)| !graph[*v].is_dummy)
+            .filter(|(v, _)| dummy_vertices || !graph[*v].is_dummy)
             // calculate y coordinate
             .map(|(v, x)| {
                 (
@@ -298,7 +300,15 @@ fn execute_phase_3(
             .collect::<Vec<_>>(),
         width,
         height,
+        dummy_vertices.then_some(edge_list(graph)),
     )
+}
+
+fn edge_list(graph: &StableDiGraph<Vertex, Edge>) -> Vec<(usize, usize)> {
+    graph
+        .edge_references()
+        .map(|e| (graph[e.source()].id, graph[e.target()].id))
+        .collect::<Vec<_>>()
 }
 
 fn slack(graph: &StableDiGraph<Vertex, Edge>, edge: EdgeIndex, minimum_length: i32) -> i32 {
