@@ -106,12 +106,12 @@ impl Default for Edge {
     }
 }
 
-pub(super) fn start(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layouts<usize> {
-    init_graph(&mut graph);
+pub(super) fn start(graph: &StableDiGraph<Vertex, Edge>, config: &Config) -> Layouts<usize> {
     weakly_connected_components(graph)
         .into_iter()
-        .map(|g| {
-            let (layout, w, h) = build_layout(g, config);
+        .map(|mut g| {
+            init_graph(&mut g);
+            let (layout, w, h) = build_layout(&mut g, config);
             if config.check_layout {
                 assert!(layout_is_valid(&layout))
             }
@@ -134,7 +134,7 @@ fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
     }
 }
 
-fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layout<usize> {
+fn build_layout(graph: &mut StableDiGraph<Vertex, Edge>, config: &Config) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Start building layout");
     info!(target: LAYOUT_LOG_TARGET, "Configuration is: {:?}", config);
 
@@ -148,23 +148,19 @@ fn build_layout(mut graph: StableDiGraph<Vertex, Edge>, config: &Config) -> Layo
 
     // we don't remember the edges that where reversed for now, since they are
     // currently not needed
-    let _ = execute_phase_0(&mut graph);
+    let _ = execute_phase_0(graph);
 
-    execute_phase_1(
-        &mut graph,
-        config.minimum_length as i32,
-        config.ranking_type,
-    );
+    execute_phase_1(graph, config.minimum_length as i32, config.ranking_type);
 
     let layers = execute_phase_2(
-        &mut graph,
+        graph,
         config.minimum_length as i32,
         config.dummy_vertices.then_some(config.dummy_size),
         config.c_minimization,
         config.transpose,
     );
 
-    let layout = execute_phase_3(&mut graph, layers);
+    let layout = execute_phase_3(graph, layers);
     debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,

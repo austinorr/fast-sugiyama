@@ -22,7 +22,7 @@ pub type Layouts<T> = Vec<Layout<T>>;
 pub fn from_edges(edges: &[(u32, u32)], config: &Config) -> Layouts<usize> {
     info!(target: INIT_LOG_TARGET, "Creating new layout from {} edges", edges.len());
     let graph = StableDiGraph::from_edges(edges);
-    algorithm::start(graph, config)
+    algorithm::start(&graph, config)
 }
 
 /// Creates a graph layout from a preexisting [StableDiGraph<V, E>].
@@ -45,7 +45,7 @@ pub fn from_graph<V, E>(
         |_, _| Edge::default(),
     );
 
-    algorithm::start(graph, config)
+    algorithm::start(&graph, config)
         .into_iter()
         .map(|(l, w, h)| {
             (
@@ -94,7 +94,7 @@ pub fn from_vertices_and_edges<'a>(
         );
     }
 
-    algorithm::start(graph, config)
+    algorithm::start(&graph, config)
 }
 
 #[test]

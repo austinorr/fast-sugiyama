@@ -435,6 +435,6 @@ mod integration {
             ..Default::default()
         };
 
-        crate::algorithm::start(graph, &cfg);
+        crate::algorithm::start(&graph, &cfg);
     }
 }

@@ -4,7 +4,7 @@ use log::{debug, info};
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 
 pub fn weakly_connected_components<V: Copy, E: Copy>(
-    graph: StableDiGraph<V, E>,
+    graph: &StableDiGraph<V, E>,
 ) -> Vec<StableDiGraph<V, E>> {
     info!(target: "connected_components", "Splitting graph into its connected components");
     let mut components = Vec::new();
@@ -15,7 +15,7 @@ pub fn weakly_connected_components<V: Copy, E: Copy>(
             continue;
         }
 
-        let component_nodes = component_dfs(node, &graph);
+        let component_nodes = component_dfs(node, graph);
         let component = graph.filter_map(
             |n, w| {
                 if component_nodes.contains(&n) {
@@ -62,7 +62,7 @@ fn component_dfs<V: Copy, E: Copy>(
 #[test]
 fn into_weakly_connected_components_two_components() {
     let g = StableDiGraph::<usize, usize>::from_edges([(0, 1), (1, 2), (3, 2), (4, 5), (4, 6)]);
-    let sgs = weakly_connected_components(g);
+    let sgs = weakly_connected_components(&g);
     assert_eq!(sgs.len(), 2);
     assert!(sgs[0].contains_edge(0.into(), 1.into()));
     assert!(sgs[0].contains_edge(1.into(), 2.into()));
