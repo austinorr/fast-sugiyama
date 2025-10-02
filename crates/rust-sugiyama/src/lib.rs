@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use algorithm::{Edge, Vertex};
+pub use algorithm::{Edge, Vertex};
 
 use configure::{Config, INIT_LOG_TARGET};
 use log::info;

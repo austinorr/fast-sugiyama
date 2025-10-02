@@ -40,8 +40,8 @@ mod p2_reduce_crossings;
 mod p3_calculate_coordinates;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(super) struct Vertex {
-    id: usize,
+pub struct Vertex {
+    pub id: usize,
     size: (f64, f64),
     rank: i32,
     pos: usize,
@@ -49,7 +49,7 @@ pub(super) struct Vertex {
     lim: u32,
     parent: Option<NodeIndex>,
     is_tree_vertex: bool,
-    is_dummy: bool,
+    pub is_dummy: bool,
     root: NodeIndex,
     align: NodeIndex,
     shift: f64,
@@ -58,7 +58,7 @@ pub(super) struct Vertex {
 }
 
 impl Vertex {
-    pub(super) fn new(id: usize, size: (f64, f64)) -> Self {
+    pub fn new(id: usize, size: (f64, f64)) -> Self {
         Self {
             id,
             size,
@@ -89,7 +89,7 @@ impl Default for Vertex {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct Edge {
+pub struct Edge {
     weight: i32,
     cut_value: Option<i32>,
     is_tree_edge: bool,
