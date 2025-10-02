@@ -86,24 +86,16 @@ pub(super) fn update_ranks(graph: &mut StableDiGraph<Vertex, Edge>, minimum_leng
     let mut queue = VecDeque::from([node]);
 
     while let Some(parent) = queue.pop_front() {
-        update_neighbor_ranks(
-            graph,
-            parent,
-            Outgoing,
-            1,
-            &mut queue,
-            &mut visited,
-            minimum_length,
-        );
-        update_neighbor_ranks(
-            graph,
-            parent,
-            Incoming,
-            -1,
-            &mut queue,
-            &mut visited,
-            minimum_length,
-        );
+        for direction in [Outgoing, Incoming] {
+            update_neighbor_ranks(
+                graph,
+                parent,
+                direction,
+                &mut queue,
+                &mut visited,
+                minimum_length,
+            );
+        }
     }
 }
 
@@ -188,12 +180,15 @@ fn update_neighbor_ranks(
     graph: &mut StableDiGraph<Vertex, Edge>,
     parent: NodeIndex,
     direction: Direction,
-    coefficient: i32,
     queue: &mut VecDeque<NodeIndex>,
     visited: &mut HashSet<NodeIndex>,
     minimum_length: i32,
 ) {
     let mut walker = graph.neighbors_directed(parent, direction).detach();
+    let coefficient = match direction {
+        Outgoing => 1,
+        Incoming => -1,
+    };
     while let Some((edge, other)) = walker.next(graph) {
         if !graph[edge].is_tree_edge || visited.contains(&other) {
             continue;

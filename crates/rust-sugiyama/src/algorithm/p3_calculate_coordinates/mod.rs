@@ -112,10 +112,8 @@ pub(crate) fn calculate_relative_coords(
     debug!(target: COORD_CALC_LOG_TARGET, "Sorted Layouts: {sorted_layouts:?}");
 
     // create final layout, by averaging the two median values
-    // try to use something like mean
     sorted_layouts
         .into_iter()
-        // .map(|(k, v)| (*k, (v[0] + v[1] + v[2] + v[3]) / 4.0))
         // "the average median is order and separation preserving" [Brandes & Kopf, 2001]
         .map(|(k, v)| (*k, avg_median4(v)))
         .collect::<Vec<_>>()
