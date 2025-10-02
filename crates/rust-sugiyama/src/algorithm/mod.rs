@@ -108,11 +108,15 @@ impl Default for Edge {
 }
 
 pub(super) fn start(graph: &StableDiGraph<Vertex, Edge>, config: &Config) -> Layouts<usize> {
+    let dummy_id_offset = graph
+        .node_indices()
+        .fold(0usize, |max, n| max.max(n.index()));
+
     weakly_connected_components(graph)
         .into_iter()
         .map(|mut g| {
             init_graph(&mut g);
-            let (positions, w, h, edges) = build_layout(&mut g, config);
+            let (positions, w, h, edges) = build_layout(&mut g, config, dummy_id_offset);
             if config.check_layout {
                 assert!(layout_is_valid(&positions))
             }
@@ -135,7 +139,11 @@ fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
     }
 }
 
-fn build_layout(graph: &mut StableDiGraph<Vertex, Edge>, config: &Config) -> Layout<usize> {
+fn build_layout(
+    graph: &mut StableDiGraph<Vertex, Edge>,
+    config: &Config,
+    dummy_id_offset: usize,
+) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Start building layout");
     info!(target: LAYOUT_LOG_TARGET, "Configuration is: {:?}", config);
 
@@ -161,7 +169,7 @@ fn build_layout(graph: &mut StableDiGraph<Vertex, Edge>, config: &Config) -> Lay
         config.transpose,
     );
 
-    let layout = execute_phase_3(graph, layers, config.dummy_vertices);
+    let layout = execute_phase_3(graph, layers, config.dummy_vertices, dummy_id_offset);
     debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,
@@ -209,11 +217,12 @@ fn execute_phase_3(
     graph: &mut StableDiGraph<Vertex, Edge>,
     mut layers: Vec<Vec<NodeIndex>>,
     dummy_vertices: bool,
+    dummy_id_offset: usize,
 ) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 3: Coordinate Calculation");
     for n in graph.node_indices().collect::<Vec<_>>() {
         if graph[n].is_dummy {
-            graph[n].id = n.index();
+            graph[n].id = n.index() + dummy_id_offset;
         }
     }
 
