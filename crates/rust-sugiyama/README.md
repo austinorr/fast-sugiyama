@@ -1,4 +1,5 @@
 # Rust Sugiyama
+
 ![example worklfow](https://github.com/paddison/rust-sugiyama/actions/workflows/rust_ci.yml/badge.svg)
 
 ## Description
@@ -20,14 +21,16 @@ Bugs or feature requests can be either submitted via a github issue or by contac
 ## Usage
 
 Currently, there are three options to create a layout:
+
 1. `from_edges`, which takes a `&[(u32, u32)]`
 2. `from_vertices_and_edges`, which takes a `&[u32]` and a `&[(u32, u32)]`
 3. `from_graph`, which takes a `petgraph::StableDiGraph<V, E>`
 
-They will divide the graph into its connected components and calculate the coordinates seperately for each component.
+They will divide the graph into its connected components and calculate the coordinates separately for each component.
 The API is implemented via the builder pattern, where a user may specify values like the minimum spacing between vertices etc.
 
-### build_layout_from_edges
+### build layout `from_edges`
+
 This takes a `&[u32, u32]` slice and calculates the x and y coordinates, the height of the graph, and the width.
 
 ```rust
@@ -67,13 +70,14 @@ let layouts = from_edges(
     },
 );
 
-for (layout, width, height) in layouts {
+for (layout, width, height, edges) in layouts {
     println!("Coordinates: {:?}", layout);
     println!("width: {width}, height: {height}");
 }
 ```
 
-### build_layout_from_graph
+### build layout `from_graph`
+
 Takes as input a `&StableDiGraph<V, E>` and calculates the x and y coordinates, the height and width of the graph.
 `NodeIndices` are preserved between layouts and map directly to the input graph.
 
@@ -103,7 +107,7 @@ let layouts = from_graph(
     },
 )
 .into_iter()
-.map(|(layout, width, height)| {
+.map(|(layout, width, height, _edges)| {
     let mut new_layout = HashMap::new();
     for (id, coords) in layout {
         new_layout.insert(g[NodeIndex::from(id)].clone(), coords);
@@ -119,16 +123,18 @@ for (layout, width, height) in layouts {
 ```
 
 ### configuration via envs
+
 It is also possible to configure the algorithm via environment variables, using the method `configure_from_env()`.
 
 Environment variables that can be set are:
 
-|ENV|values|default|description|
-|---|------|-------|-------|
-| RUST_GRAPH_MIN_LEN    | integer, > 0                | 1          | minimum edge length between layers |
-| RUST_GRAPH_V_SPACING  | integer, > 0                | 10         | minimum spacing between vertices on the same layer |
-| RUST_GRAPH_DUMMIES    | (y\|n)                       | y          | if dummy vertices are included in the final layout |
-| RUST_GRAPH_R_TYPE     | (original\|minimize\|up\|down) | minimize   | defines how vertices are places vertically |
-| RUST_GRAPH_CROSS_MIN  | (barycenter\|median)         | barycenter | which heuristic to use for crossing reduction |
-| RUST_GRAPH_TRANSPOSE  | (y\|n)                       | y          | if transpose function is used to further try to reduce crossings (may increase runtime significally for large graphs) |
-| RUST_GRAPH_DUMMY_SIZE | float, > 0, <= 1            | 1.0        |size of dummy vertices in final layout, if dummy vertices are included. this will squish the graph horizontally |
+| ENV                     | values                             | default    | description                                                                                                            |
+| ----------------------- | ---------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| RUST_GRAPH_MIN_LEN      | integer, > 0                       | 1          | minimum edge length between layers                                                                                     |
+| RUST_GRAPH_V_SPACING    | integer, > 0                       | 10         | minimum spacing between vertices on the same layer                                                                     |
+| RUST_GRAPH_DUMMIES      | y \| n                             | y          | if dummy vertices are included in the final layout                                                                     |
+| RUST_GRAPH_R_TYPE       | original \| minimize \| up \| down | minimize   | defines how vertices are placed vertically                                                                             |
+| RUST_GRAPH_CROSS_MIN    | barycenter \| median               | barycenter | which heuristic to use for crossing reduction                                                                          |
+| RUST_GRAPH_TRANSPOSE    | y \| n                             | y          | if transpose function is used to further try to reduce crossings (may increase runtime significantly for large graphs) |
+| RUST_GRAPH_DUMMY_SIZE   | float, 1 >= v > 0                  | 1.0        | size of dummy vertices in final layout, if dummy vertices are included. this will squish the graph horizontally        |
+| RUST_GRAPH_CHECK_LAYOUT | y \| n                             | y          | check if the layout is valid                                                                                           |
