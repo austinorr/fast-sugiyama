@@ -1,0 +1,16 @@
+[package]
+name = "py-fast-sugiyama"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+
+[lib]
+name = "fast_sugiyama"
+crate-type = ["cdylib"]
+
+[dependencies]
+log = { workspace = true }
+pyo3 = { version = "0.26", features = ["abi3-py311", "extension-module"] }
+pyo3-log = "0.13"
+
+rust-sugiyama = { workspace = true }

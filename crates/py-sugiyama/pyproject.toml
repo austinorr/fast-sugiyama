@@ -1,0 +1,34 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "fast-sugiyama"
+description = ""
+authors = [{ name = "Austin Orr", email = "austinmartinorr@gmail.com" }]
+requires-python = ">=3.11"
+dynamic = ["version"]
+
+[tool.maturin]
+module-name = "fast_sugiyama._fast_sugiyama"
+profile = "release-lto"
+strip = true
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-cov>=7", "networkx"]
+dev = ["fast-sugiyama[test]", "pre-commit>=3,<5", "ruff>=0.13"]
+
+[tool.ruff]
+lint.select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "PERF", # Perflint
+]
+
+[tool.coverage]
+run = { branch = true }
+report = { show_missing = true }
