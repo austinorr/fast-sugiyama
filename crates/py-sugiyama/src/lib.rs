@@ -36,6 +36,7 @@ fn from_edges_py(
     crossing_minimization: Option<String>,
     transpose: Option<bool>,
     check_layout: Option<bool>,
+    encode_edges: Option<bool>,
 ) -> PyResult<Layouts<usize>> {
     let mut _edges: Vec<(u32, u32)> = edges.extract()?;
 
@@ -74,6 +75,10 @@ fn from_edges_py(
 
     if let Some(check_layout) = check_layout {
         config.check_layout = check_layout;
+    }
+
+    if let Some(encode_edges) = encode_edges {
+        config.encode_edges = encode_edges;
     }
 
     let layouts = from_edges(&_edges, &config);

@@ -49,6 +49,7 @@ def from_edges(
         crossing_minimization=crossing_minimization,
         transpose=transpose,
         check_layout=check_layout,
+        encode_edges=False,
     )
 
     layouts = Layouts()
@@ -62,6 +63,17 @@ def from_edges(
             if n_int < len(nodes):  # pragma: no branch
                 nid = nodes[n_int]
             positions.append((nid, xy))
+
+        if el is not None:
+            el_remap = []
+            for s, t in el:
+                if s < len(nodes):
+                    s = nodes[s]
+                if t < len(nodes):
+                    t = nodes[t]
+                el_remap.append((s, t))
+            el = el_remap
+
         layouts.append((positions, w, h, el))
 
     return layouts
