@@ -23,10 +23,10 @@ use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
 use crate::configure::{
-    COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
-    LAYOUT_LOG_TARGET, RankingType,
+    Config, CrossingMinimization, RankingType, COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET,
+    INIT_LOG_TARGET, LAYOUT_LOG_TARGET,
 };
-use crate::{Layout, Layouts, util::weakly_connected_components};
+use crate::{util::weakly_connected_components, Layout, Layouts};
 use p0_cycle_removal as p0;
 use p1_layering as p1;
 use p2_reduce_crossings as p2;
@@ -381,27 +381,6 @@ fn print_to_console(
 
 #[test]
 fn is_valid_layout() {
-    fn has_duplicates<T: Eq + std::hash::Hash>(vec: &[T]) -> bool {
-        let mut seen = std::collections::HashSet::new();
-        for item in vec {
-            let is_new = seen.insert(item);
-            if !is_new {
-                return true; // Found a duplicate
-            }
-        }
-        false // No duplicates found
-    }
-
-    fn layout_is_valid(layout: &[(usize, (f64, f64))]) -> bool {
-        let rank_scale = 2_i64.pow(31) as f64; // make space to pack x & y into an i64
-        let xs = layout
-            .iter()
-            .map(|(_s, (x, y))| (y * rank_scale + x * 100.0).round() as i64)
-            .collect::<Vec<_>>();
-
-        !has_duplicates(&xs)
-    }
-
     // this graph failed to create a valid layout
     // in versions <= 0.3
     let edges = [
@@ -420,9 +399,9 @@ fn is_valid_layout() {
 
     let graph = StableDiGraph::from_edges(edges);
 
-    let layouts = start(graph, &Config::default());
+    let layouts = start(&graph, &Config::default());
 
-    for (positions, _, _) in layouts {
+    for (positions, _, _, _) in layouts {
         assert!(layout_is_valid(&positions));
     }
 }
