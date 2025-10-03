@@ -72,6 +72,11 @@ pub struct Config {
     pub transpose: bool,
     /// Whether to check that the layout is valid i.e., no duplicated coordinates.
     pub check_layout: bool,
+    /// Whether to encode/decode the edges in the `from_edges` function in case of
+    /// sparse u32 values. StableGraphs are very expensive to create and operate on
+    /// when the indices are not compact. This is not intended to be public, but
+    /// its a performance switch for users who have pre-compacted their edge indices.
+    pub encode_edges: bool,
 }
 
 impl Config {
@@ -141,6 +146,7 @@ impl Default for Config {
             transpose: TRANSPOSE_DEFAULT,
             dummy_size: DUMMY_SIZE_DEFAULT,
             check_layout: CHECK_LAYOUT_DEFAULT,
+            encode_edges: true,
         }
     }
 }

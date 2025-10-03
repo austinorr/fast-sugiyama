@@ -22,8 +22,32 @@ pub type Layouts<T> = Vec<Layout<T>>;
 /// position respectively.
 pub fn from_edges(edges: &[(u32, u32)], config: &Config) -> Layouts<usize> {
     info!(target: INIT_LOG_TARGET, "Creating new layout from {} edges", edges.len());
-    let graph = StableDiGraph::from_edges(edges);
+    let (graph, nodes) = if config.encode_edges {
+        // encoder
+        info!(target: INIT_LOG_TARGET, "Encoding edges");
+        let (encoded_edges, nodes) = util::encode_edges(edges);
+        (StableDiGraph::from_edges(encoded_edges), nodes)
+    } else {
+        (StableDiGraph::from_edges(edges), Vec::new())
+    };
+
     algorithm::start(&graph, config)
+        .into_iter()
+        .map(|(mut pos, w, h, mut el)| {
+            if config.encode_edges {
+                // decoder
+                info!(target: INIT_LOG_TARGET, "Decoding positions.");
+                util::decode_positions(&mut pos, &nodes);
+
+                if let Some(edges) = &mut el {
+                    info!(target: INIT_LOG_TARGET, "Decoding edges.");
+                    util::decode_edges(edges, &nodes);
+                }
+            }
+
+            (pos, w, h, el)
+        })
+        .collect()
 }
 
 /// Creates a graph layout from a preexisting [StableDiGraph<V, E>].

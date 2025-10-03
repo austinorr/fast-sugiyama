@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use log::{debug, info};
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
@@ -57,6 +57,51 @@ fn component_dfs<V: Copy, E: Copy>(
     }
 
     visited
+}
+
+pub(super) fn encode_edges(edges: &[(u32, u32)]) -> (Vec<(u32, u32)>, Vec<u32>) {
+    // This is the decoder. We get the decoded value by indexing into this vec.
+    let nodes: Vec<u32> = edges
+        .iter()
+        .fold(HashSet::new(), |mut acc, p| {
+            acc.insert(p.0);
+            acc.insert(p.1);
+            acc
+        })
+        .into_iter()
+        .collect();
+
+    let node_encoder: HashMap<u32, u32> = nodes
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (*n, i as u32))
+        .collect();
+
+    let encoded_edges = edges
+        .iter()
+        .map(|(s, t)| (*node_encoder.get(s).unwrap(), *node_encoder.get(t).unwrap()))
+        .collect::<Vec<_>>();
+    (encoded_edges, nodes)
+}
+
+pub(super) fn decode_positions(pos: &mut [(usize, (f64, f64))], nodes: &[u32]) {
+    for (n, _) in pos.iter_mut() {
+        if *n < nodes.len() {
+            *n = nodes[*n] as usize;
+        }
+    }
+}
+
+pub(super) fn decode_edges(edges: &mut [(usize, usize)], nodes: &[u32]) {
+    for (s, t) in edges.iter_mut() {
+        if *s < nodes.len() {
+            *s = nodes[*s] as usize;
+        }
+
+        if *t < nodes.len() {
+            *t = nodes[*t] as usize;
+        }
+    }
 }
 
 #[test]
