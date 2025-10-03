@@ -27,7 +27,8 @@ pub(crate) fn remove_cycles(graph: &mut StableDiGraph<Vertex, Edge>) -> Vec<Edge
     for edge in fas {
         if let Some((tail, head)) = graph.edge_endpoints(edge) {
             // get the weight
-            let weight = graph[edge];
+            let mut weight = graph[edge];
+            weight.reversed = true;
             // add new edge in reversed direction
             let reversed_edge = graph.add_edge(head, tail, weight);
             reversed_edges.push(reversed_edge);

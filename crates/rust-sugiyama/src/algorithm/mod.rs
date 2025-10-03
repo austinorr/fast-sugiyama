@@ -94,6 +94,7 @@ pub struct Edge {
     cut_value: Option<i32>,
     is_tree_edge: bool,
     has_type_1_conflict: bool,
+    reversed: bool,
 }
 
 impl Default for Edge {
@@ -103,6 +104,7 @@ impl Default for Edge {
             cut_value: None,
             is_tree_edge: false,
             has_type_1_conflict: false,
+            reversed: false,
         }
     }
 }
@@ -155,8 +157,7 @@ fn build_layout(
         vertex.size.1 += config.vertex_spacing;
     }
 
-    // we don't remember the edges that where reversed for now, since they are
-    // currently not needed
+    // we store the edges that where reversed in the graph itself for later correction.
     let _ = execute_phase_0(graph);
 
     execute_phase_1(graph, config.minimum_length as i32, config.ranking_type);
@@ -227,6 +228,7 @@ fn execute_phase_3(
     }
 
     let mut layouts = p3::create_layouts(graph, &mut layers);
+    reset_edge_directions(graph);
 
     p3::align_to_smallest_width_layout(&mut layouts);
 
@@ -310,6 +312,21 @@ fn edge_list(graph: &StableDiGraph<Vertex, Edge>) -> Vec<(usize, usize)> {
         .edge_references()
         .map(|e| (graph[e.source()].id, graph[e.target()].id))
         .collect::<Vec<_>>()
+}
+
+fn reset_edge_directions(graph: &mut StableDiGraph<Vertex, Edge>) {
+    for edge in graph.edge_indices().collect::<Vec<_>>() {
+        let mut w = graph[edge];
+        if w.reversed
+            && let Some((tail, head)) = graph.edge_endpoints(edge)
+        {
+            // add new edge in correct direction
+            w.reversed = false;
+            let _ = graph.add_edge(head, tail, w);
+            // remove the reversed edge
+            graph.remove_edge(edge);
+        }
+    }
 }
 
 fn slack(graph: &StableDiGraph<Vertex, Edge>, edge: EdgeIndex, minimum_length: i32) -> i32 {

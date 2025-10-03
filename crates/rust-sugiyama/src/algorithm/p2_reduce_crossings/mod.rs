@@ -209,24 +209,24 @@ pub(super) fn insert_dummy_vertices(
                 tail.index(),
                 head.index());
 
-            // we don't need to remember edges that where removed
-            graph.remove_edge(edge);
-            for rank in (graph[tail].rank + 1)..graph[head].rank {
-                // usize usize::MAX id as reserved value for a dummy vertex
-                let d = Vertex {
-                    is_dummy: true,
-                    size: (dummy_size, 0.0),
-                    ..Default::default()
-                };
-                let new = graph.add_node(d);
-                graph[new].align = new;
-                graph[new].root = new;
-                graph[new].sink = new;
-                graph[new].rank = rank;
-                graph.add_edge(tail, new, Edge::default());
-                tail = new;
+            if let Some(w) = graph.remove_edge(edge) {
+                for rank in (graph[tail].rank + 1)..graph[head].rank {
+                    // usize usize::MAX id as reserved value for a dummy vertex
+                    let d = Vertex {
+                        is_dummy: true,
+                        size: (dummy_size, 0.0),
+                        ..Default::default()
+                    };
+                    let new = graph.add_node(d);
+                    graph[new].align = new;
+                    graph[new].root = new;
+                    graph[new].sink = new;
+                    graph[new].rank = rank;
+                    graph.add_edge(tail, new, w); // naively propagate weight to dummy edges
+                    tail = new;
+                }
+                graph.add_edge(tail, head, w); // add last dummy edge connecting to the head
             }
-            graph.add_edge(tail, head, Edge::default()); // add last dummy edge connecting to the head
         }
     }
 }
