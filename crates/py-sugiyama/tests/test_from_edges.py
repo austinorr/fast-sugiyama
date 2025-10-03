@@ -126,21 +126,38 @@ def test_large_graph(_n):
             assert check_positions(positions, fast=False)
 
 
-@pytest.mark.parametrize("n", range(10, 161, 30))
-def test_tiny(n):
+@pytest.mark.parametrize("crossing_minimization", ["median", "barycenter"])
+@pytest.mark.parametrize("n", range(10, 101, 30))
+def test_tiny(n, crossing_minimization):
     ng = 25
 
-    for ctype in ["median", "barycenter"]:
-        for i in range(ng):
-            edges = list(
-                nx.gn_graph(n, seed=n + i * 42, create_using=nx.DiGraph).edges()
-            )
+    for i in range(ng):
+        edges = list(nx.gn_graph(n, seed=n + i * 42, create_using=nx.DiGraph).edges())
 
-            layouts = from_edges(edges, crossing_minimization=ctype)  # type: ignore
+        layouts = from_edges(edges, crossing_minimization=crossing_minimization)  # type: ignore
 
-            for positions, *_ in layouts:
-                if not check_positions(positions):  # pragma: no cover
-                    print(f"ctype: {ctype}, iters: {i}, len: {n}")
-                    print(f"edges: {edges}")
-                    print(f"positions {positions}")
-                    assert check_positions(positions, fast=False)
+        for positions, *_ in layouts:
+            if not check_positions(positions):  # pragma: no cover
+                print(f"ctype: {crossing_minimization}, iters: {i}, len: {n}")
+                print(f"edges: {edges}")
+                print(f"positions {positions}")
+                assert check_positions(positions, fast=False)
+
+
+@pytest.mark.parametrize("dummy_vertices", [True, False])
+def test_dummy_verts(dummy_vertices):
+    edges = [
+        (1, 0),
+        (2, 1),
+        (3e42, 0),
+        (4, 1),
+        (5, 0),
+        (4, 0),
+    ]
+
+    pos = from_edges(edges, dummy_vertices=dummy_vertices).to_dict()
+
+    if dummy_vertices:
+        assert len(pos) > len(edges)
+    else:
+        assert len(pos) == len(edges)
