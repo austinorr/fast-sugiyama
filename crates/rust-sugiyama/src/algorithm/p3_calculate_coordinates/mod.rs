@@ -21,10 +21,12 @@ pub(super) fn create_layouts(
     for _v_dir in [VDir::Down, VDir::Up] {
         for h_dir in [HDir::Right, HDir::Left] {
             // reset root, align and sink values
-            info!(target: COORD_CALC_LOG_TARGET,
+            info!(
+                target: COORD_CALC_LOG_TARGET,
                 "creating layouts for vertical direction: {:?}, horizontal direction {:?}",
                 _v_dir,
-                h_dir);
+                h_dir,
+            );
 
             reset_alignment(graph, layers);
             create_vertical_alignments(graph, layers);
@@ -56,8 +58,11 @@ pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<Node
     let min_max: Vec<(f64, f64, f64)> = aligned_layouts
         .iter()
         .map(|c| {
-            let min = *c.values().min_by(|a, b| a.total_cmp(b)).unwrap();
-            let max = *c.values().max_by(|a, b| a.total_cmp(b)).unwrap();
+            let (min, max) = c
+                .values()
+                .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), x| {
+                    (min.min(*x), max.max(*x))
+                });
             (min, max, max - min)
         })
         .collect();
@@ -67,8 +72,8 @@ pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<Node
         .iter()
         .enumerate()
         .min_by(|(_, (_, _, width_a)), (_, (_, _, width_b))| width_a.total_cmp(width_b))
-        .unwrap()
-        .0;
+        .map(|(index, _)| index)
+        .unwrap();
 
     // align all other layouts to the lowest coordinate of the layout with the minimum width,
     for (i, layout) in aligned_layouts.iter_mut().enumerate() {
