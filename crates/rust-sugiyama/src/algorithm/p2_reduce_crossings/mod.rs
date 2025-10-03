@@ -196,6 +196,7 @@ pub(super) fn insert_dummy_vertices(
     graph: &mut StableDiGraph<Vertex, Edge>,
     minimum_length: i32,
     dummy_size: f64,
+    dummy_id_offset: usize,
 ) {
     // find all edges that have slack of greater than 0.
     // and insert dummy vertices
@@ -218,6 +219,7 @@ pub(super) fn insert_dummy_vertices(
                         ..Default::default()
                     };
                     let new = graph.add_node(d);
+                    graph[new].id = new.index() + dummy_id_offset;
                     graph[new].align = new;
                     graph[new].root = new;
                     graph[new].sink = new;

@@ -168,9 +168,10 @@ fn build_layout(
         (config.dummy_vertices || config.dummy_size > 0.0).then_some(config.dummy_size),
         config.c_minimization,
         config.transpose,
+        dummy_id_offset,
     );
 
-    let layout = execute_phase_3(graph, layers, config.dummy_vertices, dummy_id_offset);
+    let layout = execute_phase_3(graph, layers, config.dummy_vertices);
     debug!(target: LAYOUT_LOG_TARGET, "Coordinates: {:?}\nwidth: {}, height:{}",
         layout.0,
         layout.1,
@@ -202,10 +203,16 @@ fn execute_phase_2(
     dummy_size: Option<f64>,
     crossing_minimization: CrossingMinimization,
     transpose: bool,
+    dummy_id_offset: usize,
 ) -> Vec<Vec<NodeIndex>> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 2: Crossing Reduction");
 
-    p2::insert_dummy_vertices(graph, minimum_length, dummy_size.unwrap_or(0.0));
+    p2::insert_dummy_vertices(
+        graph,
+        minimum_length,
+        dummy_size.unwrap_or(0.0),
+        dummy_id_offset,
+    );
     let mut order = p2::ordering(graph, crossing_minimization, transpose);
     if dummy_size.is_none() {
         p2::remove_dummy_vertices(graph, &mut order);
@@ -218,14 +225,8 @@ fn execute_phase_3(
     graph: &mut StableDiGraph<Vertex, Edge>,
     mut layers: Vec<Vec<NodeIndex>>,
     dummy_vertices: bool,
-    dummy_id_offset: usize,
 ) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 3: Coordinate Calculation");
-    for n in graph.node_indices().collect::<Vec<_>>() {
-        if graph[n].is_dummy {
-            graph[n].id = n.index() + dummy_id_offset;
-        }
-    }
 
     let mut layouts = p3::create_layouts(graph, &mut layers);
     reset_edge_directions(graph);
