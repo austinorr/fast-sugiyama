@@ -1,9 +1,9 @@
-from typing import Sequence
+from typing import Iterable, Sequence
 
 NumType = int | float
 NodeIDType = int | str
 EdgeType = tuple[NodeIDType, NodeIDType]  # we support mixed type edges
-EdgeListType = Sequence[EdgeType]
+EdgeListType = Iterable[EdgeType]
 CoordType = tuple[float, float] | tuple[int, int]
 PositionType = tuple[NodeIDType, CoordType]
 PositionsType = Sequence[PositionType]
