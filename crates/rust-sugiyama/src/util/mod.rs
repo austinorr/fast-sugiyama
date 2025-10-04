@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use log::{debug, info};
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
@@ -57,51 +57,6 @@ fn component_dfs<V: Copy, E: Copy>(
     }
 
     visited
-}
-
-pub(super) fn encode_edges(edges: &[(u32, u32)]) -> (Vec<(u32, u32)>, Vec<u32>) {
-    // This is the decoder. We get the decoded value by indexing into this vec.
-    let nodes: Vec<u32> = edges
-        .iter()
-        .fold(HashSet::new(), |mut acc, p| {
-            acc.insert(p.0);
-            acc.insert(p.1);
-            acc
-        })
-        .into_iter()
-        .collect();
-
-    let node_encoder: HashMap<u32, u32> = nodes
-        .iter()
-        .enumerate()
-        .map(|(i, n)| (*n, i as u32))
-        .collect();
-
-    let encoded_edges = edges
-        .iter()
-        .map(|(s, t)| (*node_encoder.get(s).unwrap(), *node_encoder.get(t).unwrap()))
-        .collect::<Vec<_>>();
-    (encoded_edges, nodes)
-}
-
-pub(super) fn decode_positions(pos: &mut [(usize, (f64, f64))], nodes: &[u32]) {
-    for (n, _) in pos.iter_mut() {
-        if *n < nodes.len() {
-            *n = nodes[*n] as usize;
-        }
-    }
-}
-
-pub(super) fn decode_edges(edges: &mut [(usize, usize)], nodes: &[u32]) {
-    for (s, t) in edges.iter_mut() {
-        if *s < nodes.len() {
-            *s = nodes[*s] as usize;
-        }
-
-        if *t < nodes.len() {
-            *t = nodes[*t] as usize;
-        }
-    }
 }
 
 #[test]
@@ -197,4 +152,77 @@ fn test_radix_sort() {
     let input = [10, 0, 1, 5, 4, 22, 12];
     let output = radix_sort(input.to_vec(), 2);
     assert_eq!(output, [0, 1, 4, 5, 10, 12, 22]);
+}
+
+pub(super) fn encode_edges(edges: &[(u32, u32)]) -> (Vec<(u32, u32)>, Vec<u32>) {
+    // This is the decoder. We get the decoded value by indexing into this vec.
+    let nodes: Vec<u32> = edges
+        .iter()
+        // We preserve the order by using a BTree.
+        .fold(BTreeSet::new(), |mut acc, p| {
+            acc.insert(p.0);
+            acc.insert(p.1);
+            acc
+        })
+        .into_iter()
+        .collect();
+
+    let node_encoder: HashMap<u32, u32> = nodes
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (*n, i as u32))
+        .collect();
+
+    let encoded_edges = edges
+        .iter()
+        .map(|(s, t)| (*node_encoder.get(s).unwrap(), *node_encoder.get(t).unwrap()))
+        .collect::<Vec<_>>();
+    (encoded_edges, nodes)
+}
+
+pub(super) fn decode_positions(pos: &mut [(usize, (f64, f64))], nodes: &[u32]) {
+    for (n, _) in pos.iter_mut() {
+        if *n < nodes.len() {
+            *n = nodes[*n] as usize;
+        }
+    }
+}
+
+pub(super) fn decode_edges(edges: &mut [(usize, usize)], nodes: &[u32]) {
+    for (s, t) in edges.iter_mut() {
+        if *s < nodes.len() {
+            *s = nodes[*s] as usize;
+        }
+
+        if *t < nodes.len() {
+            *t = nodes[*t] as usize;
+        }
+    }
+}
+
+#[test]
+fn test_encode_edges() {
+    let edges = vec![(1u32, 0), (2, 0), (50, 1), (4, 2), (3, 0), (5, 50)];
+
+    let max = edges.iter().fold(0, |m, (a, b)| m.max(*a).max(*b));
+    assert!(max > (edges.len() * 2) as u32);
+
+    let (encoded_edges, decoder) = encode_edges(&edges);
+    let max = encoded_edges.iter().fold(0, |m, (a, b)| m.max(*a).max(*b));
+    assert!(max < (edges.len() * 2) as u32);
+
+    let mut decodable_edges = encoded_edges
+        .into_iter()
+        .map(|(a, b)| (a as usize, b as usize))
+        .collect::<Vec<_>>();
+
+    decode_edges(&mut decodable_edges, &decoder);
+
+    assert_eq!(
+        edges
+            .into_iter()
+            .map(|(a, b)| (a as usize, b as usize))
+            .collect::<Vec<_>>(),
+        decodable_edges
+    );
 }
