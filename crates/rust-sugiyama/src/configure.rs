@@ -221,39 +221,48 @@ impl From<CrossingMinimization> for &'static str {
     }
 }
 
-#[test]
-fn from_env_all_valid() {
+#[cfg(test)]
+mod test {
+    use super::*;
     use std::env;
-    unsafe {
-        env::set_var(ENV_MINIMUM_LENGTH, "5");
-        env::set_var(ENV_DUMMY_VERTICES, "y");
-        env::set_var(ENV_DUMMY_SIZE, "0.1");
-        env::set_var(ENV_RANKING_TYPE, "up");
-        env::set_var(ENV_CROSSING_MINIMIZATION, "median");
-        env::set_var(ENV_TRANSPOSE, "n");
-        env::set_var(ENV_VERTEX_SPACING, "20");
-        env::set_var(ENV_CHECK_LAYOUT, "y");
-    }
-    let cfg = Config::new_from_env();
-    assert_eq!(cfg.minimum_length, 5);
-    assert!(cfg.dummy_vertices);
-    assert_eq!(cfg.dummy_size, 0.1);
-    assert_eq!(cfg.ranking_type, RankingType::Up);
-    assert_eq!(cfg.c_minimization, CrossingMinimization::Median);
-    assert!(!cfg.transpose);
-    assert_eq!(cfg.vertex_spacing, 20.0);
-    assert!(cfg.check_layout);
-}
+    use std::sync::Mutex;
 
-#[test]
-fn from_env_invalid_value() {
-    use std::env;
-    unsafe {
-        env::set_var(ENV_CROSSING_MINIMIZATION, "flubbeldiflap");
-        env::set_var(ENV_VERTEX_SPACING, "1bleh0");
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn from_env_all_valid() {
+        let _guard = ENV_MUTEX.lock().unwrap(); // Acquire lock
+        unsafe {
+            env::set_var(ENV_MINIMUM_LENGTH, "5");
+            env::set_var(ENV_DUMMY_VERTICES, "y");
+            env::set_var(ENV_DUMMY_SIZE, "0.1");
+            env::set_var(ENV_RANKING_TYPE, "up");
+            env::set_var(ENV_CROSSING_MINIMIZATION, "median");
+            env::set_var(ENV_TRANSPOSE, "n");
+            env::set_var(ENV_VERTEX_SPACING, "20");
+            env::set_var(ENV_CHECK_LAYOUT, "y");
+        }
+        let cfg = Config::new_from_env();
+        assert_eq!(cfg.minimum_length, 5);
+        assert!(cfg.dummy_vertices);
+        assert_eq!(cfg.dummy_size, 0.1);
+        assert_eq!(cfg.ranking_type, RankingType::Up);
+        assert_eq!(cfg.c_minimization, CrossingMinimization::Median);
+        assert!(!cfg.transpose);
+        assert_eq!(cfg.vertex_spacing, 20.0);
+        assert!(cfg.check_layout);
     }
-    let cfg = Config::new_from_env();
-    let default = Config::default();
-    assert_eq!(default.c_minimization, cfg.c_minimization);
-    assert_eq!(default.vertex_spacing, cfg.vertex_spacing);
+
+    #[test]
+    fn from_env_invalid_value() {
+        let _guard = ENV_MUTEX.lock().unwrap(); // Acquire lock
+        unsafe {
+            env::set_var(ENV_CROSSING_MINIMIZATION, "flubbeldiflap");
+            env::set_var(ENV_VERTEX_SPACING, "1bleh0");
+        }
+        let cfg = Config::new_from_env();
+        let default = Config::default();
+        assert_eq!(default.c_minimization, cfg.c_minimization);
+        assert_eq!(default.vertex_spacing, cfg.vertex_spacing);
+    }
 }
