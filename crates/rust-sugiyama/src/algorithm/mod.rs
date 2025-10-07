@@ -23,10 +23,10 @@ use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
 use crate::configure::{
-    Config, CrossingMinimization, RankingType, COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET,
-    INIT_LOG_TARGET, LAYOUT_LOG_TARGET,
+    COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
+    LAYOUT_LOG_TARGET, RankingType,
 };
-use crate::{util::weakly_connected_components, Layout, Layouts};
+use crate::{Layout, Layouts, util::weakly_connected_components};
 use p0_cycle_removal as p0;
 use p1_layering as p1;
 use p2_reduce_crossings as p2;

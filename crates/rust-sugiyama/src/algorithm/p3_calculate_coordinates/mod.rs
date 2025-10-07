@@ -4,11 +4,11 @@ mod tests;
 use std::collections::HashMap;
 
 use log::{debug, info, trace};
+use petgraph::Direction::Incoming;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::visit::EdgeRef;
-use petgraph::Direction::Incoming;
 
-use super::{slack, Edge, Vertex, COORD_CALC_LOG_TARGET};
+use super::{COORD_CALC_LOG_TARGET, Edge, Vertex, slack};
 
 pub(super) fn create_layouts(
     graph: &mut StableDiGraph<Vertex, Edge>,
