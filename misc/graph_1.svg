@@ -1,0 +1,65 @@
+<svg height="313" width="400" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="head" markerHeight="10" markerWidth="25" orient="auto" refX="32.5" refY="5">
+<path d="M 0 0 L 25 5 L 0 10 z" fill="black"/>
+</marker>
+</defs>
+<line marker-end="url(#head)" style="stroke:black;" x1="164" x2="164" y1="169" y2="169">
+<!-- (54, 54) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="164" x2="92" y1="169" y2="169">
+<!-- (54, 51) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="164" x2="200" y1="169" y2="241">
+<!-- (54, 50) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="236" x2="200" y1="169" y2="241">
+<!-- (53, 50) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="308" x2="200" y1="169" y2="241">
+<!-- (55, 50) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="92" x2="92" y1="97" y2="169">
+<!-- (52, 51) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="164" x2="164" y1="97" y2="169">
+<!-- (54, 54) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="164" x2="92" y1="97" y2="169">
+<!-- (54, 51) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="164" x2="200" y1="97" y2="241">
+<!-- (54, 50) -->
+</line>
+<line marker-end="url(#head)" style="stroke:black;" x1="92" x2="200" y1="169" y2="241">
+<!-- (51, 50) -->
+</line>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="144" y="156.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="164" y="169">
+54
+</text>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="216" y="156.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="236" y="169">
+53
+</text>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="288" y="156.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="308" y="169">
+55
+</text>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="72" y="84.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="92" y="97">
+52
+</text>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="180" y="228.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="200" y="241">
+50
+</text>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="144" y="84.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="164" y="97">
+54
+</text>
+<rect height="25" rx="6.25" ry="4.166666666666667" style="fill:white;stroke:black;" width="40" x="72" y="156.5"/>
+<text dominant-baseline="middle" text-anchor="middle" x="92" y="169">
+51
+</text>
+</svg>
