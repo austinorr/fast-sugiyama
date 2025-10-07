@@ -134,7 +134,7 @@ fn create_svg<E>(
 fn main() {
     env_logger::init();
 
-    let edges = [
+    let edges = vec![
         (20, 17),
         (22, 20),
         (5, 1),
@@ -173,21 +173,23 @@ fn main() {
         (54, 50),
     ];
 
-    let og_graph = StableDiGraph::from_edges(edges).map(
-        |id, _: &Vertex| Vertex::new(id.index(), (0.0, 0.0)),
-        |_, _e: &Edge| Edge::default(),
-    );
     let vertex_spacing = 72.0;
 
     let layouts = from_edges(
         &edges,
         &Config {
             vertex_spacing,
-            // dummy_vertices: false,
-            // dummy_size: 72.0000,
             ..Default::default()
         },
     );
+
+    let nodes = edges
+        .iter()
+        .fold(std::collections::HashSet::new(), |mut acc, p| {
+            acc.insert(p.0);
+            acc.insert(p.1);
+            acc
+        });
 
     for (i, (layout, _w, _h, el)) in layouts.iter().enumerate() {
         let graph = match el {
@@ -196,19 +198,21 @@ fn main() {
                     .map(
                         |id, _: &Vertex| {
                             let mut v = Vertex::new(id.index(), (0.0, 0.0));
-                            v.is_dummy = !og_graph.contains_node(id);
+                            v.is_dummy = !nodes.contains(&(v.id as u32));
                             v
                         },
                         |_, _: &Edge| Edge::default(),
                     )
-                //
             }
-            None => &og_graph,
+            None => &StableDiGraph::from_edges(&edges).map(
+                |id, _: &Vertex| Vertex::new(id.index(), (0.0, 0.0)),
+                |_, _e: &Edge| Edge::default(),
+            ),
         };
 
         let svg = create_svg(graph, layout, 20.0, 25.0, (vertex_spacing, vertex_spacing));
 
-        let fname = format!("./_no_git_graph_{i}.svg");
+        let fname = format!("./misc/graph_{i}.svg");
         let mut file = std::fs::File::create(&fname).expect("Unable to create svg file");
         use std::io::Write;
         // Write the content (as bytes) to the file
