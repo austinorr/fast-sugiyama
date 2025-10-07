@@ -10,8 +10,8 @@ mod algorithm;
 pub mod configure;
 mod util;
 
-pub type Positions<T> = Vec<(T, (f64, f64))>;
-pub type Layout<T> = (Positions<T>, f64, f64, Option<Vec<(T, T)>>);
+type Positions<T> = Vec<(T, (f64, f64))>;
+type Layout<T> = (Positions<T>, f64, f64, Option<Vec<(T, T)>>);
 pub type Layouts<T> = Vec<Layout<T>>;
 
 /// Creates a graph layout from edges, which are given as a `&[(u32, u32)]`.
@@ -136,105 +136,6 @@ fn run_algo_empty_graph() {
 }
 
 #[cfg(test)]
-mod benchmark {
-    use crate::configure::Config;
-    use graph_generator::layered::LayeredGraph;
-    use graph_generator::random::RandomGraph;
-
-    use super::from_edges;
-
-    #[test]
-    fn r_100() {
-        let edges = RandomGraph::new(100)
-            .build_edges()
-            .into_iter()
-            .collect::<Vec<(u32, u32)>>();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!("Random 100 edges: {}ms", start.elapsed().as_millis());
-    }
-
-    #[test]
-    fn r_1000() {
-        let edges = RandomGraph::new(1000)
-            .build_edges()
-            .into_iter()
-            .collect::<Vec<(u32, u32)>>();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!("Random 1000 edges: {}ms", start.elapsed().as_millis());
-    }
-
-    #[test]
-    fn r_2000() {
-        let edges = RandomGraph::new(2000).build_edges();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!("Random 2000 edges: {}ms", start.elapsed().as_millis());
-    }
-
-    #[test]
-    fn r_4000() {
-        let edges = RandomGraph::new(4000).build_edges();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!("Random 4000 edges: {}ms", start.elapsed().as_millis());
-    }
-
-    #[test]
-    fn l_1000_2() {
-        let n = 1000;
-        let e = 2;
-        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!(
-            "{n} nodes, {e} edges per node: {}ms",
-            start.elapsed().as_millis()
-        );
-    }
-
-    #[test]
-    fn l_2000_2() {
-        let n = 2000;
-        let e = 2;
-        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!(
-            "{n} nodes, {e} edges per node: {}ms",
-            start.elapsed().as_millis()
-        );
-    }
-
-    #[test]
-    fn l_4000_2() {
-        let n = 4000;
-        let e = 2;
-        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!(
-            "{n} nodes, {e} edges per node: {}ms",
-            start.elapsed().as_millis()
-        );
-    }
-
-    #[test]
-    fn l_8000_2() {
-        let n = 8000;
-        let e = 2;
-        let edges = LayeredGraph::new_from_num_nodes(n, e).build_edges();
-        let start = std::time::Instant::now();
-        let _ = from_edges(&edges, &Config::default());
-        println!(
-            "{n} nodes, {e} edges per node: {}ms",
-            start.elapsed().as_millis()
-        );
-    }
-}
-
-#[cfg(test)]
 mod check_visuals {
 
     use crate::{
@@ -291,7 +192,7 @@ mod check_visuals {
     }
     #[test]
     fn verify_looks_good() {
-        // NOTE: This test might fail eventually, since the order of lements in a row canot be guaranteed;
+        // NOTE: This test might fail eventually, since the order of elements in a row cannot be guaranteed;
         let edges = [
             (0, 1),
             (1, 2),

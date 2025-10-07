@@ -1,10 +1,8 @@
-use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
-
+use super::{Edge, Vertex};
 use crate::algorithm::p1_layering::{
     cut_values::init_cutvalues, enter_edge, is_head_to_tail, leave_edge, low_lim::init_low_lim,
 };
-
-use super::{Edge, Vertex};
+use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 
 pub(crate) const EXAMPLE_GRAPH: [(u32, u32); 9] = [
     (0, 1),
@@ -336,12 +334,11 @@ fn enter_edge_find_edge() {
 
 mod integration {
 
-    use crate::configure::{Config, RankingType};
-    use petgraph::stable_graph::StableDiGraph;
-
-    use crate::algorithm::p1_layering::{Edge, Vertex, rank, slack};
-
     use super::{EXAMPLE_GRAPH, GraphBuilder};
+    use crate::algorithm::p1_layering::{Edge, Vertex, rank, slack};
+    use crate::configure::{Config, RankingType};
+    use crate::util::graph_generator::{LayeredGraph, gnm_graph_edges};
+    use petgraph::stable_graph::StableDiGraph;
 
     fn is_correct(graph: StableDiGraph<Vertex, Edge>, minimum_length: i32) -> bool {
         // all cut values must be positive,
@@ -374,7 +371,6 @@ mod integration {
 
     #[test]
     fn run_algorithm_tree_500_nodes_three_edges_per_node() {
-        use graph_generator::layered::LayeredGraph;
         let edges = LayeredGraph::new_from_num_nodes(500, 3)
             .build_edges()
             .into_iter()
@@ -386,11 +382,7 @@ mod integration {
 
     #[test]
     fn run_algorithm_random_graph_1000_nodes() {
-        use graph_generator::random::RandomGraph;
-        let edges = RandomGraph::new(1000)
-            .build_edges()
-            .into_iter()
-            .collect::<Vec<_>>();
+        let edges = gnm_graph_edges(1000, Some(1000), None);
         println!("built random layout");
         let (mut graph, ..) = GraphBuilder::new(&edges).build();
         rank(&mut graph, 1, RankingType::MinimizeEdgeLength);

@@ -16,7 +16,7 @@ log = "0.4"
 petgraph = { version = "0.8", default-features = false, features = [
     "stable_graph",
 ] }
-graph_generator = { git = "https://github.com/paddison/graph_generator.git", rev = "f454b849" }
+rand = { version = "0.9", default-features = false, features = ["std_rng"] }
 svg = "0.18.0"
 
 

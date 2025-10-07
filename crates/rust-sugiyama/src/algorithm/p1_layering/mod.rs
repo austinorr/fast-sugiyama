@@ -1,7 +1,7 @@
 // TODOS: Keep non graph edges during rank() procedure in vecdeque to be able to cyclically search through them
 //! Executes the second phase of sugiyamas algorithm, which assigns each vertex
 //! a rank.
-//! Currently three ranking algorithm are implmented:
+//! Currently three ranking algorithm are implemented:
 //!
 //! 1. Original - tries to move each vertex as close to neighbors as possible.
 //! 2. MinimizeEdgeLength - builds a feasible tight tree in order to minimize

@@ -1,7 +1,9 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
-
+use crate::Layout;
 use log::{debug, info};
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
+use std::collections::{BTreeSet, HashMap, HashSet};
+#[cfg(test)]
+pub mod graph_generator;
 
 pub fn weakly_connected_components<V: Copy, E: Copy>(
     graph: &StableDiGraph<V, E>,
