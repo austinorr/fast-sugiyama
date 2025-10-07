@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import pytest
 
@@ -20,6 +19,8 @@ def misc() -> Path:
     reason="Only run when --save-output is given",
 )
 def test_compare_pydot(misc, multi_graph):
+    import matplotlib.pyplot as plt
+
     g = multi_graph
 
     nodes = [
@@ -57,6 +58,8 @@ def test_compare_pydot(misc, multi_graph):
     reason="Only run when --save-output is given",
 )
 def test_difficult_pydot(misc, multi_graph):
+    import matplotlib.pyplot as plt
+
     g = multi_graph
 
     positions = [
@@ -86,6 +89,8 @@ def test_difficult_pydot(misc, multi_graph):
     reason="Only run when --save-output is given",
 )
 def test_rect_pack_output(misc, multi_graph):
+    import matplotlib.pyplot as plt
+
     g = multi_graph
     layout = from_edges(g.edges())
     rect_layout = layout.rect_pack_layouts(max_width=2500)
@@ -110,6 +115,8 @@ def test_rect_pack_output(misc, multi_graph):
     reason="Only run when --save-output is given",
 )
 def test_compact_output(misc, multi_graph):
+    import matplotlib.pyplot as plt
+
     g = multi_graph
     layout = from_edges(g.edges())
     compact_layout = layout.compact_layout(max_width=2500)
@@ -133,6 +140,8 @@ def test_compact_output(misc, multi_graph):
     reason="Only run when --save-output is given",
 )
 def test_quickstart(misc):
+    import matplotlib.pyplot as plt
+
     g = nx.gn_graph(42, seed=132, create_using=nx.DiGraph)
     pos = from_edges(g.edges()).to_dict()
     fig, ax = plt.subplots(figsize=(7, 4))
@@ -147,6 +156,8 @@ def test_quickstart(misc):
     reason="Only run when --save-output is given",
 )
 def test_hero(misc):
+    import matplotlib.pyplot as plt
+
     edges = [
         (20, 17),
         (22, 20),
