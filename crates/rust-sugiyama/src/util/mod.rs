@@ -182,7 +182,7 @@ pub(super) fn encode_edges(edges: &[(u32, u32)]) -> (Vec<(u32, u32)>, Vec<u32>) 
     (encoded_edges, nodes)
 }
 
-pub(super) fn decode_positions(pos: &mut [(usize, (f64, f64))], nodes: &[u32]) {
+fn decode_positions(pos: &mut [(usize, (f64, f64))], nodes: &[u32]) {
     for (n, _) in pos.iter_mut() {
         if *n < nodes.len() {
             *n = nodes[*n] as usize;
@@ -190,7 +190,7 @@ pub(super) fn decode_positions(pos: &mut [(usize, (f64, f64))], nodes: &[u32]) {
     }
 }
 
-pub(super) fn decode_edges(edges: &mut [(usize, usize)], nodes: &[u32]) {
+fn decode_edges(edges: &mut [(usize, usize)], nodes: &[u32]) {
     for (s, t) in edges.iter_mut() {
         if *s < nodes.len() {
             *s = nodes[*s] as usize;
@@ -199,6 +199,15 @@ pub(super) fn decode_edges(edges: &mut [(usize, usize)], nodes: &[u32]) {
         if *t < nodes.len() {
             *t = nodes[*t] as usize;
         }
+    }
+}
+
+pub(super) fn decode_layout(layout: &mut Layout<usize>, decoder: &[u32]) {
+    let (pos, _w, _h, el) = layout;
+    decode_positions(pos, decoder);
+
+    if let Some(edges) = el {
+        decode_edges(edges, decoder);
     }
 }
 

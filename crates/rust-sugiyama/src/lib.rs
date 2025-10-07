@@ -33,19 +33,13 @@ pub fn from_edges(edges: &[(u32, u32)], config: &Config) -> Layouts<usize> {
 
     algorithm::start(&graph, config)
         .into_iter()
-        .map(|(mut pos, w, h, mut el)| {
+        .map(|mut layout| {
             if config.encode_edges {
                 // decoder
-                info!(target: INIT_LOG_TARGET, "Decoding positions.");
-                util::decode_positions(&mut pos, &nodes);
-
-                if let Some(edges) = &mut el {
-                    info!(target: INIT_LOG_TARGET, "Decoding edges.");
-                    util::decode_edges(edges, &nodes);
-                }
+                info!(target: INIT_LOG_TARGET, "Decoding layout.");
+                util::decode_layout(&mut layout, &nodes);
             }
-
-            (pos, w, h, el)
+            layout
         })
         .collect()
 }
