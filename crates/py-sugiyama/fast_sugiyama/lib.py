@@ -2,7 +2,7 @@ from typing import Literal
 
 from ._fast_sugiyama import from_edges as _from_edges
 from ._types import EdgeListType, NumType
-from .layout import Layouts
+from .layout import PYDOT_SPACING, Layouts
 
 Ranking = Literal[
     "original",
@@ -26,7 +26,7 @@ def from_edges(
     check_layout: bool | None = None,
 ) -> Layouts:
     if vertex_spacing is None:
-        vertex_spacing = 72
+        vertex_spacing = PYDOT_SPACING
 
     # The rust impl only accepts edges with source & target nodes stored as usize/int.
     # First, get unique nodes as list. We'll use the list index to translate from

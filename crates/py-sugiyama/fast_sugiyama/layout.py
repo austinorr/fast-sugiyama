@@ -13,6 +13,8 @@ from ._types import (
     Sequence,
 )
 
+PYDOT_SPACING = 72  # approximately
+
 
 def _round(x, base=None):
     if not base:  # handle base = 0 & base = None
@@ -54,7 +56,7 @@ def get_origins(layouts: LayoutsType) -> Sequence[CoordType]:
 def get_bboxes(layouts: LayoutsType, spacing=None) -> BBoxesType:
     """Create boxes for use in mpl.Rectangle. This is useful for debugging."""
     if spacing is None:
-        spacing = 0
+        spacing = PYDOT_SPACING
     origins = get_origins(layouts)
 
     bboxes = [
@@ -158,7 +160,7 @@ class Layouts(LayoutsType):
 
 def align_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
     if spacing is None:
-        spacing = 0
+        spacing = PYDOT_SPACING
     new_layouts = []
     offset = 0
 
@@ -174,7 +176,7 @@ def align_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
 
 def align_layouts_vertical(layouts: LayoutsType, spacing=None) -> Layouts:
     if spacing is None:
-        spacing = 0
+        spacing = PYDOT_SPACING
     new_layouts = []
     offset = 0
 
@@ -227,7 +229,7 @@ def align_layouts_horizontal_center(layouts: LayoutsType) -> Layouts:
 
 def compact_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
     if spacing is None:
-        spacing = 0
+        spacing = PYDOT_SPACING
     layers_xmax = defaultdict(float)
     new_layouts = []
 
@@ -262,7 +264,7 @@ def rect_pack_layouts(layouts: LayoutsType, spacing=None, **kwargs) -> Layouts:
     import rpack
 
     if spacing is None:
-        spacing = 0
+        spacing = PYDOT_SPACING
 
     max_value = max(max(w, h) for _, w, h, _ in layouts)
     resolution = 1000
