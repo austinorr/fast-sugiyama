@@ -1,12 +1,20 @@
 # Rust Sugiyama
 
-![example worklfow](https://github.com/paddison/rust-sugiyama/actions/workflows/rust_ci.yml/badge.svg)
+This crate is a fork of the excellent [`rust-sugiyama`](https://crates.io/crates/rust-sugiyama) crate, and includes minor api changes to support layouts via the python bindings.
+This fork is not intended to be published to crates.io, instead anything useful we do here will be offered to the upstream crate.
+
+Minor api differences from the upstream project include:
+
+- Compute layout width and height in layout units rather than node count
+- Optionally validate the layout to prevent overlapping nodes
+- Support returning dummy vertices and edges so they can be used in renderers
+- Optional re-encoding edges passed to the `from_edges` function in case user supplied edge list is non-contiguous (i.e., user is passing 'ids' rather than 'indices').
 
 ## Description
 
 An implementation of Sugiyamas algorithm for displaying a layered graph.
 
-This crate heavily uses the crate [petgraph](https://crates.io/crates/petgraph) under the hood.
+This crate heavily uses the crate [`petgraph`](https://crates.io/crates/petgraph) under the hood.
 
 Cycle Removal is implemented by using the `greedy_feedback_arc_set` function of petgraph and then reversing the edges from the set.
 
@@ -70,7 +78,7 @@ let layouts = from_edges(
     },
 );
 
-for (layout, width, height, edges) in layouts {
+for (layout, width, height, _edges) in layouts {
     println!("Coordinates: {:?}", layout);
     println!("width: {width}, height: {height}");
 }
