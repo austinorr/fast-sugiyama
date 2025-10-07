@@ -4,10 +4,13 @@ build-backend = "maturin"
 
 [project]
 name = "fast-sugiyama"
-description = ""
+description = "A fast and flexible hierarchical graph layout engine."
 authors = [{ name = "Austin Orr", email = "austinmartinorr@gmail.com" }]
 requires-python = ">=3.11"
 dynamic = ["version"]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
 
 [tool.maturin]
 module-name = "fast_sugiyama._fast_sugiyama"
