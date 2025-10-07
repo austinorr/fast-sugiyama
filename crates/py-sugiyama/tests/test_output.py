@@ -46,7 +46,7 @@ def test_compare_pydot(misc, multi_graph):
 
     fig.tight_layout()
 
-    fig.savefig(misc / "pydot_compare.svg")
+    fig.savefig(misc / "pydot_compare.jpg", dpi=150)
 
 
 @pytest.mark.output
@@ -72,7 +72,7 @@ def test_difficult_pydot(misc, multi_graph):
 
     fig.tight_layout()
 
-    fig.savefig(misc / "difficult_pydot.svg")
+    fig.savefig(misc / "difficult_pydot.jpg", dpi=150)
 
 
 @pytest.mark.output
@@ -93,7 +93,7 @@ def test_rect_pack_output(misc, multi_graph):
 
     fig.tight_layout()
 
-    fig.savefig(misc / "rect_pack_layout.svg")
+    fig.savefig(misc / "rect_pack_layout.jpg", dpi=150)
 
 
 @pytest.mark.output
@@ -113,4 +113,4 @@ def test_compact_output(misc, multi_graph):
 
     fig.tight_layout()
 
-    fig.savefig(misc / "compact_layout.svg")
+    fig.savefig(misc / "compact_layout.jpg", dpi=150)
