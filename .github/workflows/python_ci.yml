@@ -42,7 +42,7 @@ jobs:
         run: |
           cd ./crates/py-sugiyama/
           pip install -e .[test]
-          pytest -m "not output" --cov -n 2
+          pytest --cov -n 2
       # - name: upload to codecov.io
       #   uses: codecov/codecov-action@v4
       #   with:

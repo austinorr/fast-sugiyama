@@ -4,9 +4,12 @@ import networkx as nx
 import pytest
 
 
-def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "output: mark test that creates an output file for the docs."
+def pytest_addoption(parser):
+    parser.addoption(
+        "--save-output",
+        action="store_true",
+        default=False,
+        help="write output examples to ./misc",
     )
 
 
