@@ -48,7 +48,7 @@ jobs:
         # For linux; only test on x86-64 for now as this matches the runner architecture
         # if: (matrix.architecture == 'x86-64') # || startsWith(matrix.os, 'macos')) #&& !startsWith(matrix.os, 'windows')
         run: |
-          pip install --force-reinstall --verbose ./target/wheels/*.whl
+          pip install --force-reinstall --verbose --find-links=./target/wheels/ fast-sugiyama
           python -c "from fast_sugiyama import from_edges; print(from_edges([(51, 50), (52, 51), (53, 50), (54, 51), (55, 50), (54, 50)]))"
 
       - name: Upload wheel
