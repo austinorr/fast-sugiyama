@@ -33,16 +33,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Build with Maturin + sdist
-        if: matrix.architecture == 'x86-64' && startsWith(matrix.os, 'ubuntu')
+      - name: Build with Maturin
         run: |
           pip install "maturin>=1.9"
           cd ./crates/py-sugiyama
-          maturin sdist -v
-      - name: Build with Maturin + sdist
+          maturin build -v
+      - name: sdist with Maturin
+        if: matrix.architecture == 'x86-64' && startsWith(matrix.os, 'ubuntu')
         run: |
           cd ./crates/py-sugiyama
-          maturin build -v
+          maturin sdist -v
 
       - name: Test wheel Unix
         # For linux; only test on x86-64 for now as this matches the runner architecture

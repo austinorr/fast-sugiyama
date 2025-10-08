@@ -3,7 +3,9 @@ name = "py-fast-sugiyama"
 version = { workspace = true }
 edition = { workspace = true }
 authors = { workspace = true }
-
+description = "A fast and flexible hierarchical graph layout engine."
+license = "MIT"
+license-file = "LICENSE"
 
 [lib]
 name = "fast_sugiyama"
