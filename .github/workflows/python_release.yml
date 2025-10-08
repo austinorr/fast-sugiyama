@@ -39,12 +39,20 @@ jobs:
           cd ./crates/py-sugiyama
           maturin build --sdist -v
 
-      - name: Test wheel
+      - name: Test wheel Unix
         # For linux; only test on x86-64 for now as this matches the runner architecture
-        if: matrix.architecture == 'x86-64' || startsWith(matrix.os, 'macos') || startsWith(matrix.os, 'windows')
+        if: (matrix.architecture == 'x86-64' || startsWith(matrix.os, 'macos')) && !startsWith(matrix.os, 'windows')
         run: |
           pip install --force-reinstall --verbose ./target/wheels/*.whl
           python -c "from fast_sugiyama import from_edges; print(from_edges([(51, 50), (52, 51), (53, 50), (54, 51), (55, 50), (54, 50)]))"
+
+      - name: Test wheel windows
+        # For linux; only test on x86-64 for now as this matches the runner architecture
+        if: matrix.architecture == 'x86-64' && startsWith(matrix.os, 'windows')
+        run: |
+          pip install --force-reinstall --verbose .\target\wheels\*.whl
+          python -c "from fast_sugiyama import from_edges; print(from_edges([(51, 50), (52, 51), (53, 50), (54, 51), (55, 50), (54, 50)]))"
+
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
