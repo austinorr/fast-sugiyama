@@ -3,7 +3,7 @@
 This project adds python bindings for the [`rust-sugiyama`](https://crates.io/crates/rust-sugiyama) crate, to produce directed graph layouts similar to the GraphViz `dot` program.
 
 <div align="center" >
-    <img width=400 src="./crates/py-sugiyama/misc/hero.png" alt="Graph Example">
+    <img width=400 src="https://raw.githubusercontent.com/austinorr/fast-sugiyama/master/crates/py-sugiyama/misc/hero.png" alt="Graph Example">
 </div>
 
 ## Description
@@ -23,5 +23,5 @@ nx.draw_networkx(g, pos=pos, with_labels=False, node_size=150)
 ```
 
 <div align="left" >
-    <img width=500 src="./crates/py-sugiyama/misc/quickstart.png" alt="Quick Start Output">
+    <img width=500 src="https://raw.githubusercontent.com/austinorr/fast-sugiyama/master/crates/py-sugiyama/misc/quickstart.png" alt="Quick Start Output">
 </div>
