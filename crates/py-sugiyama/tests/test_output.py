@@ -5,6 +5,38 @@ import pytest
 
 from fast_sugiyama import from_edges
 
+HERO_EDGES = [
+    (20, 17),
+    (22, 20),
+    (5, 1),
+    (19, 0),
+    (23, 22),
+    (10, 0),
+    (9, 8),
+    (1, 0),
+    (7, 1),
+    (24, 17),
+    (18, 16),
+    (21, 6),
+    (4, 2),
+    (3, 0),
+    (14, 0),
+    (12, 6),
+    (7, 22),
+    (6, 1),
+    (15, 1),
+    (15, 7),
+    (16, 6),
+    (15, 10),
+    (17, 7),
+    (8, 1),
+    (10, 4),
+    (2, 0),
+    (10, 1),
+    (11, 9),
+    (13, 0),
+]
+
 
 @pytest.fixture(scope="session")
 def misc() -> Path:
@@ -158,37 +190,7 @@ def test_quickstart(misc):
 def test_hero(misc):
     import matplotlib.pyplot as plt
 
-    edges = [
-        (20, 17),
-        (22, 20),
-        (5, 1),
-        (19, 0),
-        (23, 22),
-        (10, 0),
-        (9, 8),
-        (1, 0),
-        (7, 1),
-        (24, 17),
-        (18, 16),
-        (21, 6),
-        (4, 2),
-        (3, 0),
-        (14, 0),
-        (12, 6),
-        (7, 22),
-        (6, 1),
-        (15, 1),
-        (15, 7),
-        (16, 6),
-        (15, 10),
-        (17, 7),
-        (8, 1),
-        (10, 4),
-        (2, 0),
-        (10, 1),
-        (11, 9),
-        (13, 0),
-    ]
+    edges = HERO_EDGES
 
     layouts = from_edges(edges)
     pos = layouts.to_dict()
@@ -225,3 +227,48 @@ def test_hero(misc):
     fig.tight_layout()
 
     fig.savefig(misc / "hero.png", dpi=150)
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--save-output')",
+    reason="Only run when --save-output is given",
+)
+def test_hero_no_dummies(misc):
+    import matplotlib.pyplot as plt
+
+    edges = HERO_EDGES
+    g = nx.DiGraph()
+    g.add_edges_from(edges)
+    layouts = from_edges(edges)
+    pos = layouts.to_dict()
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    nx.draw_networkx(g, pos=pos, ax=ax, node_size=300)
+
+    ax.set_aspect("equal")
+    fig.tight_layout()
+
+    fig.savefig(misc / "hero_no_dummies.png", dpi=150)
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--save-output')",
+    reason="Only run when --save-output is given",
+)
+def test_slice_vert_center(misc, multi_graph):
+    import matplotlib.pyplot as plt
+
+    g = multi_graph
+    layout = from_edges(g.edges())
+    pos = (
+        layout[:6].align_layouts_vertical().align_layouts_horizontal_center().to_dict()
+    )
+
+    fig, ax = plt.subplots(figsize=(4, 8))
+    ax.set_aspect("equal")
+
+    nx.draw_networkx(g.subgraph(pos), pos=pos, ax=ax, with_labels=False, node_size=30)
+
+    fig.tight_layout()
+
+    fig.savefig(misc / "slice_vert_center_layout.png", dpi=150)
