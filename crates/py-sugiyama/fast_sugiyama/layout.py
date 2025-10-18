@@ -9,6 +9,7 @@ from ._types import (
     LayoutsType,
     LayoutType,
     NodeIDType,
+    NumType,
     PositionsType,
     Sequence,
 )
@@ -16,7 +17,7 @@ from ._types import (
 PYDOT_SPACING = 72  # approximately
 
 
-def _round(x, base=None):
+def _round(x: NumType, base: int | None = None):
     if not base:  # handle base = 0 & base = None
         base = 1
     base = abs(base)
@@ -53,7 +54,7 @@ def get_origins(layouts: LayoutsType) -> Sequence[CoordType]:
     return [get_position_origin(pos) for pos, *_ in layouts]
 
 
-def get_bboxes(layouts: LayoutsType, spacing=None) -> BBoxesType:
+def get_bboxes(layouts: LayoutsType, spacing: NumType | None = None) -> BBoxesType:
     """Create boxes for use in mpl.Rectangle. This is useful for debugging."""
     if spacing is None:
         spacing = PYDOT_SPACING
@@ -81,7 +82,7 @@ class Layouts(LayoutsType):
     @overload
     def __getitem__(self, key: slice) -> Self: ...
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: slice | SupportsIndex) -> LayoutType | LayoutsType:
         if isinstance(key, slice):
             datas: LayoutsType = Layouts(list.__getitem__(self, key))
             return datas
@@ -100,7 +101,7 @@ class Layouts(LayoutsType):
     def get_origins(self):
         return get_origins(self)
 
-    def to_bboxes(self, spacing=None):
+    def to_bboxes(self, spacing: NumType | None = None):
         return get_bboxes(self, spacing=spacing)
 
     def shuffle(self, seed=None):
@@ -115,10 +116,10 @@ class Layouts(LayoutsType):
     def sort_vertical(self, reverse: bool = False):
         return Layouts(sorted(self, key=lambda x: get_origin(x)[1], reverse=reverse))
 
-    def align_layouts_vertical(self, spacing=None):
+    def align_layouts_vertical(self, spacing: NumType | None = None):
         return align_layouts_vertical(self, spacing=spacing)
 
-    def align_layouts_horizontal(self, spacing=None):
+    def align_layouts_horizontal(self, spacing: NumType | None = None):
         return align_layouts_horizontal(self, spacing=spacing)
 
     def align_layouts_vertical_top(self):
@@ -130,20 +131,30 @@ class Layouts(LayoutsType):
     def align_layouts_horizontal_center(self):
         return align_layouts_horizontal_center(self)
 
-    def compact_layouts_horizontal(self, spacing=None):
+    def compact_layouts_horizontal(self, spacing: NumType | None = None):
         return compact_layouts_horizontal(self, spacing=spacing)
 
-    def rect_pack_layouts(self, spacing=None, max_width=None, max_height=None):
+    def rect_pack_layouts(
+        self,
+        spacing: NumType | None = None,
+        max_width: NumType | None = None,
+        max_height: NumType | None = None,
+    ):
         return rect_pack_layouts(
             self, spacing=spacing, max_width=max_width, max_height=max_height
         )
 
-    def dot_layout(self, spacing=None):
+    def dot_layout(self, spacing: NumType | None = None):
         return self.align_layouts_vertical_top().compact_layouts_horizontal(
             spacing=spacing
         )
 
-    def compact_layout(self, spacing=None, max_width=None, max_height=None):
+    def compact_layout(
+        self,
+        spacing: NumType | None = None,
+        max_width: NumType | None = None,
+        max_height: NumType | None = None,
+    ):
         return (
             self.rect_pack_layouts(
                 spacing=spacing, max_width=max_width, max_height=max_height
@@ -158,11 +169,14 @@ class Layouts(LayoutsType):
         return self
 
 
-def align_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
+def align_layouts_horizontal(
+    layouts: LayoutsType,
+    spacing: NumType | None = None,
+) -> Layouts:
     if spacing is None:
         spacing = PYDOT_SPACING
-    new_layouts = []
-    offset = 0
+    new_layouts: LayoutsType = []
+    offset = 0.0
 
     for positions, w, h, el in layouts:
         minx = min(x for _, (x, _) in positions)
@@ -174,11 +188,14 @@ def align_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
     return Layouts(new_layouts)
 
 
-def align_layouts_vertical(layouts: LayoutsType, spacing=None) -> Layouts:
+def align_layouts_vertical(
+    layouts: LayoutsType,
+    spacing: NumType | None = None,
+) -> Layouts:
     if spacing is None:
         spacing = PYDOT_SPACING
-    new_layouts = []
-    offset = 0
+    new_layouts: LayoutsType = []
+    offset = 0.0
 
     for positions, w, h, el in layouts:
         miny = min(y for _, (_, y) in positions)
@@ -191,7 +208,7 @@ def align_layouts_vertical(layouts: LayoutsType, spacing=None) -> Layouts:
 
 
 def align_layouts_vertical_top(layouts: LayoutsType) -> Layouts:
-    new_layouts = []
+    new_layouts: LayoutsType = []
 
     maxh = max(h for *_, h, _ in layouts)
     for positions, w, h, el in layouts:
@@ -204,7 +221,7 @@ def align_layouts_vertical_top(layouts: LayoutsType) -> Layouts:
 
 
 def align_layouts_vertical_center(layouts: LayoutsType) -> Layouts:
-    new_layouts = []
+    new_layouts: LayoutsType = []
 
     midh = max(h for *_, h, _ in layouts) / 2
     for positions, w, h, el in layouts:
@@ -216,7 +233,7 @@ def align_layouts_vertical_center(layouts: LayoutsType) -> Layouts:
 
 
 def align_layouts_horizontal_center(layouts: LayoutsType) -> Layouts:
-    new_layouts = []
+    new_layouts: LayoutsType = []
 
     midw = max(w for _, w, *_ in layouts) / 2
     for positions, w, h, el in layouts:
@@ -227,11 +244,14 @@ def align_layouts_horizontal_center(layouts: LayoutsType) -> Layouts:
     return Layouts(new_layouts)
 
 
-def compact_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
+def compact_layouts_horizontal(
+    layouts: LayoutsType,
+    spacing: NumType | None = None,
+) -> Layouts:
     if spacing is None:
         spacing = PYDOT_SPACING
-    layers_xmax = defaultdict(float)
-    new_layouts = []
+    layers_xmax: dict[NumType, float] = defaultdict(float)
+    new_layouts: LayoutsType = []
 
     for layout in layouts:
         pos_og, w, h, el = layout
@@ -260,7 +280,12 @@ def compact_layouts_horizontal(layouts: LayoutsType, spacing=None) -> Layouts:
     return Layouts(new_layouts)
 
 
-def rect_pack_layouts(layouts: LayoutsType, spacing=None, **kwargs) -> Layouts:
+def rect_pack_layouts(
+    layouts: LayoutsType,
+    spacing: NumType | None = None,
+    max_width: NumType | None = None,
+    max_height: NumType | None = None,
+) -> Layouts:
     import rpack
 
     if spacing is None:
@@ -270,8 +295,6 @@ def rect_pack_layouts(layouts: LayoutsType, spacing=None, **kwargs) -> Layouts:
     resolution = 1000
     scale = resolution / max_value
 
-    max_width = kwargs.pop("max_width", None)
-    max_height = kwargs.pop("max_height", None)
     if max_width:
         max_width = int(max_width * scale)
     if max_height:
@@ -292,11 +315,11 @@ def rect_pack_layouts(layouts: LayoutsType, spacing=None, **kwargs) -> Layouts:
     # snap y's to nearest 'layer' spacing and then round both x's and y's to
     # nearest 0.5 increment to match the original layout
     origins = [
-        (round(2 * x / scale) / 2, _round(2 * y / scale, spacing) / 2)
+        (round(2 * x / scale) / 2, _round(2 * y / scale, int(round(spacing, 0))) / 2)
         for x, y in origins
     ]
 
-    new_layouts = []
+    new_layouts: LayoutsType = []
     for (xo, yo), (positions, w, h, el) in zip(origins, layouts, strict=True):
         minx = min(x for _, (x, _) in positions)
         miny = min(y for _, (_, y) in positions)

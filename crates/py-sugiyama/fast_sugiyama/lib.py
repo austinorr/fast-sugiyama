@@ -1,17 +1,13 @@
-from typing import Literal
-
-from ._fast_sugiyama import from_edges as _from_edges
-from ._types import EdgeListType, NumType
+from ._fast_sugiyama import _from_edges
+from ._types import (
+    CrossingMinimization,
+    EdgeListType,
+    EdgeType,
+    NumType,
+    PositionType,
+    Ranking,
+)
 from .layout import PYDOT_SPACING, Layouts
-
-Ranking = Literal[
-    "original",
-    "minimize",
-    "up",
-    "down",
-]
-
-CrossingMinimization = Literal["median", "barycenter"]
 
 
 def from_edges(
@@ -53,26 +49,31 @@ def from_edges(
     )
 
     layouts = Layouts()
+    positions: list[PositionType]
+    el: list[EdgeType] | None
 
-    for positions_int, w, h, el in layouts_int:
+    for positions_int, w, h, el_int in layouts_int:
         positions = []
         for n_int, xy in positions_int:
-            nid = n_int
+            nid: int | str = n_int
 
             # only branches if dummies vertices are included in layout
             if n_int < len(nodes):  # pragma: no branch
                 nid = nodes[n_int]
             positions.append((nid, xy))
 
-        if el is not None:
-            el_remap = []
-            for s, t in el:
-                if s < len(nodes):
-                    s = nodes[s]
-                if t < len(nodes):
-                    t = nodes[t]
-                el_remap.append((s, t))
-            el = el_remap
+        el = None
+        if el_int is not None:
+            el = []
+            for si, ti in el_int:
+                s: int | str = si
+                if si < len(nodes):
+                    s = nodes[si]
+
+                t: int | str = ti
+                if ti < len(nodes):
+                    t = nodes[ti]
+                el.append((s, t))
 
         layouts.append((positions, w, h, el))
 
