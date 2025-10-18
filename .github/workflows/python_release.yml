@@ -35,14 +35,16 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Build with Maturin
         run: |
-          pip install "maturin>=1.9"
+          pip install -U "maturin>=1.9" setuptools wheel twine
           cd ./crates/py-sugiyama
           maturin build -v
+          twine check --strict ../../target/wheels/*.whl
       - name: sdist with Maturin
         if: matrix.architecture == 'x86-64' && startsWith(matrix.os, 'ubuntu')
         run: |
           cd ./crates/py-sugiyama
           maturin sdist -v
+          twine check --strict ../../target/wheels/*.tar.gz
 
       - name: Test wheel
         run: |
