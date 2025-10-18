@@ -1,5 +1,8 @@
-from . import layout as layout
+from importlib.metadata import version
+
+from . import layout
 from .layout import Layouts
-from .lib import from_edges as from_edges
+from .lib import from_edges
 
 __all__ = ["from_edges", "layout", "Layouts"]
+__version__ = version(__name__)
