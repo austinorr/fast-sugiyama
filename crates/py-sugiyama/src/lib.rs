@@ -25,7 +25,7 @@ fn _fast_sugiyama(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
 
 #[allow(clippy::too_many_arguments)]
 #[pyfunction]
-#[pyo3(name = "from_edges")]
+#[pyo3(name = "_from_edges")]
 fn from_edges_py(
     edges: &Bound<'_, PyList>,
     minimum_length: Option<u32>,
