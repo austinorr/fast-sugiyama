@@ -93,6 +93,7 @@ impl GraphBuilder {
         }
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     #[allow(dead_code)]
     pub(super) fn minimum_length(&mut self) -> &mut i32 {
         &mut self.minimum_length
@@ -181,6 +182,7 @@ impl GraphBuilder {
         self
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     #[allow(dead_code)]
     pub(super) fn with_connecting_path(mut self, connecting_path: &[(u32, u32)]) -> Self {
         self.connecting_path = connecting_path
@@ -197,6 +199,7 @@ impl GraphBuilder {
 
     /// Set the edge that was removed during rank procedure.
     /// Panics if edge is not contained in graph.
+    #[cfg_attr(coverage, coverage(off))]
     #[allow(dead_code)]
     pub(super) fn with_removed_edge(mut self, tail: u32, head: u32) -> Self {
         self.removed_edge = self.graph.find_edge(tail.into(), head.into()).unwrap();

@@ -13,6 +13,12 @@ repository = "https://github.com/paddison/rust-sugiyama"
 keywords = ["graph", "graph-display", "directed-graph"]
 
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(coverage,coverage_nightly)',
+] }
+
+
 [dependencies]
 log = { workspace = true }
 petgraph = { workspace = true }

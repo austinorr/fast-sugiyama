@@ -21,6 +21,7 @@ struct Order {
 }
 
 impl Display for Order {
+    #[cfg_attr(coverage, coverage(off))]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
         for row in &self._inner {
@@ -167,6 +168,7 @@ impl Order {
         cross_count
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     #[allow(dead_code)]
     fn print(&self) {
         for line in &self._inner {
@@ -187,6 +189,7 @@ impl Deref for Order {
 }
 
 impl DerefMut for Order {
+    #[cfg_attr(coverage, coverage(off))]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self._inner
     }

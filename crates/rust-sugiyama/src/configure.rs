@@ -251,6 +251,16 @@ mod test {
         assert!(!cfg.transpose);
         assert_eq!(cfg.vertex_spacing, 20.0);
         assert!(cfg.check_layout);
+
+        let m: &str = CrossingMinimization::Median.into();
+        assert_eq!("median", m);
+        let b: &str = CrossingMinimization::Barycenter.into();
+        assert_eq!("barycenter", b);
+
+        let o: &str = RankingType::Original.into();
+        assert_eq!("original", o);
+        let d: &str = RankingType::Down.into();
+        assert_eq!("down", d);
     }
 
     #[test]

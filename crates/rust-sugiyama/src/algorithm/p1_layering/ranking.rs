@@ -10,6 +10,7 @@ use super::{
     Edge, RANKING_LOG_TARGET, Vertex, cut_values::init_cutvalues, low_lim::init_low_lim, slack,
 };
 
+#[cfg_attr(coverage, coverage(off))]
 #[allow(dead_code)]
 pub(crate) fn print_ranks(graph: &StableDiGraph<Vertex, Edge>) {
     for (i, v) in graph.node_indices().enumerate() {
