@@ -1,5 +1,12 @@
 # `Fast-Sugiyama`
 
+[![codecov](https://codecov.io/gh/austinorr/fast-sugiyama/graph/badge.svg?token=0GWVZIWGIJ)](https://codecov.io/gh/austinorr/fast-sugiyama)
+[![Rust Lint & Test](https://github.com/austinorr/fast-sugiyama/actions/workflows/rust_ci.yml/badge.svg)](https://github.com/austinorr/fast-sugiyama/actions/workflows/rust_ci.yml)
+[![Python Lint & Test](https://github.com/austinorr/fast-sugiyama/actions/workflows/python_ci.yml/badge.svg)](https://github.com/austinorr/fast-sugiyama/actions/workflows/python_ci.yml)
+<a href="https://pypi.org/project/fast-sugiyama" target="_blank">
+<img src="https://img.shields.io/pypi/v/fast-sugiyama?color=%2334D058&label=pypi%20package" alt="Package version">
+</a>
+
 This project adds python bindings for the [`rust-sugiyama`](https://crates.io/crates/rust-sugiyama) crate, to produce directed graph layouts similar to the GraphViz `dot` program.
 
 It's an implementation of Sugiyama's algorithm for displaying a layered, or hierarchical, directed graph like so:
