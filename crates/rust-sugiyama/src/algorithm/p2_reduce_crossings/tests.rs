@@ -132,12 +132,14 @@ impl GraphBuilder {
         }
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     #[allow(dead_code)]
     fn with_minimum_length(mut self, minimum_length: i32) -> Self {
         self.minimum_length = minimum_length;
         self
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     #[allow(dead_code)]
     fn with_dummies(mut self, dummies: &[u32]) -> Self {
         for dummy in dummies {

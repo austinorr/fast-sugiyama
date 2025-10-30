@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use std::collections::HashMap;
 
 pub use algorithm::{Edge, Vertex};
@@ -122,11 +123,125 @@ pub fn from_vertices_and_edges<'a>(
     algorithm::start(&graph, config)
 }
 
-#[test]
-fn run_algo_empty_graph() {
-    let edges = [];
-    let g = from_edges(&edges, &Config::default());
-    assert!(g.is_empty());
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn edges() -> Vec<(u32, u32)> {
+        vec![
+            (20, 17),
+            (22, 20),
+            (5, 1),
+            (19, 0),
+            (23, 22),
+            (10, 0),
+            (9, 8),
+            (1, 0),
+            (7, 1),
+            (24, 17),
+            (18, 16),
+            (21, 6),
+            (4, 2),
+            (3, 0),
+            (14, 0),
+            (12, 6),
+            (7, 22),
+            (6, 1),
+            (15, 1),
+            (15, 7),
+            (16, 6),
+            (15, 10),
+            (17, 7),
+            (8, 1),
+            (10, 4),
+            (2, 0),
+            (10, 1),
+            (11, 9),
+            (13, 0),
+        ]
+    }
+
+    #[test]
+    fn run_algo_empty_graph() {
+        let edges = [];
+        let g = from_edges(&edges, &Config::default());
+        assert!(g.is_empty());
+    }
+
+    #[test]
+    fn run_from_graph() {
+        let edges = edges();
+        let g: StableDiGraph<u32, u32> = StableDiGraph::from_edges(edges);
+
+        let vertex_size = |_: NodeIndex, _: &u32| (1.0, 1.0);
+        let layouts = from_graph(
+            &g,
+            &vertex_size,
+            &Config {
+                vertex_spacing: 10.0,
+                ..Default::default()
+            },
+        );
+
+        assert!(layouts.len() == 1);
+    }
+
+    #[test]
+    fn run_from_edges_encode_edges() {
+        let edges = edges();
+        let layouts = from_edges(
+            &edges,
+            &Config {
+                vertex_spacing: 10.0,
+                encode_edges: true,
+                ..Default::default()
+            },
+        );
+        assert!(layouts.len() == 1);
+    }
+
+    #[test]
+    fn run_from_edges_no_encode_edges() {
+        let edges = edges();
+        let layouts = from_edges(
+            &edges,
+            &Config {
+                vertex_spacing: 10.0,
+                encode_edges: false,
+                ..Default::default()
+            },
+        );
+        assert!(layouts.len() == 1);
+    }
+
+    #[test]
+    fn run_from_edges_no_dummy() {
+        let edges = edges();
+        let layouts = from_edges(
+            &edges,
+            &Config {
+                vertex_spacing: 10.0,
+                dummy_vertices: false,
+                dummy_size: 0.0,
+                ..Default::default()
+            },
+        );
+        assert!(layouts.len() == 1);
+    }
+
+    #[test]
+    fn run_from_edges_median() {
+        let edges = edges();
+        let layouts = from_edges(
+            &edges,
+            &Config {
+                c_minimization: String::from("median").try_into().unwrap(),
+                ranking_type: String::from("original").try_into().unwrap(),
+                ..Default::default()
+            },
+        );
+        assert!(layouts.len() == 1);
+    }
 }
 
 #[cfg(test)]

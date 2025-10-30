@@ -356,6 +356,7 @@ fn layout_is_valid(layout: &[(usize, (f64, f64))]) -> bool {
     !has_duplicates(&xs)
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[allow(dead_code)]
 fn print_to_console(
     dir: VDir,
