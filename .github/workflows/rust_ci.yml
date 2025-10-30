@@ -12,7 +12,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -28,7 +28,7 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -44,7 +44,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -60,3 +60,25 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+
+      - name: Run Rust tests and generate coverage
+        run: cargo +nightly llvm-cov --lcov --branch --output-path=.lcov
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./.lcov
