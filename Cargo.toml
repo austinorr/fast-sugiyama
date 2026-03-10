@@ -20,7 +20,9 @@ petgraph = { version = "0.8", default-features = false, features = [
     "stable_graph",
 ] }
 rand = { version = "0.9", default-features = false, features = ["std_rng"] }
-svg = "0.18.0"
+svg = "0.18"
+pyo3 = { version = "0.28", features = ["abi3-py311", "extension-module"] }
+pyo3-log = "0.13"
 
 
 [profile.release-lto]

@@ -15,5 +15,5 @@ crate-type = ["cdylib"]
 rust-sugiyama = { workspace = true }
 
 log = { workspace = true }
-pyo3 = { version = "0.26", features = ["abi3-py311", "extension-module"] }
-pyo3-log = "0.13"
+pyo3 = { workspace = true }
+pyo3-log = { workspace = true }
