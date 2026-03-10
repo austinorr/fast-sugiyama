@@ -64,7 +64,7 @@ dev = [
 
 [tool.maturin]
 module-name = "fast_sugiyama._fast_sugiyama"
-profile = "release-lto"
+profile = "release-py"
 strip = true
 
 [tool.ruff]

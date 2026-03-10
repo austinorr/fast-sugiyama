@@ -4,3 +4,7 @@ panic-immediate-abort = true
 
 [profile.dev]
 panic = "abort"
+
+[profile.release-py]
+inherits = "release-lto"
+panic = "immediate-abort"
