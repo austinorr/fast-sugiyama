@@ -43,7 +43,7 @@ jobs:
       - name: Test Coverage
         run: |
           pip install -e crates/py-sugiyama[test]
-          pytest crates/py-sugiyama/ --cov --cov-branch --cov-config=crates/py-sugiyama/pyproject.toml
+          pytest crates/py-sugiyama/tests --cov --cov-config=crates/py-sugiyama/pyproject.toml
       - name: Upload coverage reports to Codecov
         if: (matrix.os == 'ubuntu-latest') && contains(env.USING_COVERAGE, matrix.python-version)
         uses: codecov/codecov-action@v5
