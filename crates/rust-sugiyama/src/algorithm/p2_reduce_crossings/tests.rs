@@ -434,8 +434,8 @@ mod order {
         let order = Order::new(_inner, graph.node_count());
         let expected_order = order_layer(
             &graph,
-            false,
             &order,
+            false,
             crate::algorithm::p2_reduce_crossings::barycenter,
         );
         assert_eq!(

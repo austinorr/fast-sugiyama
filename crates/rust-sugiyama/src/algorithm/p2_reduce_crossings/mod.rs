@@ -70,20 +70,28 @@ impl Order {
         v: NodeIndex,
         w: NodeIndex,
         graph: &StableDiGraph<Vertex, Edge>,
+        v_adjacent: &mut Vec<usize>,
+        w_adjacent: &mut Vec<usize>,
     ) -> usize {
         let mut crossings = 0;
         for dir in [Incoming, Outgoing] {
-            let mut v_adjacent = graph
-                .neighbors_directed(v, dir)
-                .map(|n| self.positions[n.index()])
-                .collect::<Vec<_>>();
-            let mut w_adjacent = graph
-                .neighbors_directed(w, dir)
-                .map(|n| self.positions[n.index()])
-                .collect::<Vec<_>>();
-            v_adjacent.sort();
-            w_adjacent.sort();
-            crossings += Self::calculate_cross_count_two_vertices(&v_adjacent, &w_adjacent);
+            v_adjacent.clear();
+            v_adjacent.extend(
+                graph
+                    .neighbors_directed(v, dir)
+                    .map(|n| self.positions[n.index()]),
+            );
+            v_adjacent.sort_unstable();
+
+            w_adjacent.clear();
+            w_adjacent.extend(
+                graph
+                    .neighbors_directed(w, dir)
+                    .map(|n| self.positions[n.index()]),
+            );
+            w_adjacent.sort_unstable();
+
+            crossings += Self::calculate_cross_count_two_vertices(v_adjacent, w_adjacent);
         }
         crossings
     }
@@ -340,9 +348,10 @@ fn reduce_crossings_bilayer_sweep(
     let mut last_best = 0;
     let mut best_layers = order._inner.clone();
     for i in 0.. {
-        order = order_layer(graph, i % 2 == 0, &order, cm_method);
+        let move_down = i % 2 == 0;
+        order = order_layer(graph, &order, move_down, cm_method);
         if transpose {
-            self::transpose(graph, &mut order, i % 2 == 0);
+            self::transpose(graph, &mut order, move_down);
         }
         let crossings = order.crossings(graph);
         trace!(target: CROSSING_LOG_TARGET, "Current number of crossings: {crossings}");
@@ -373,6 +382,10 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
         IterDir::Backward
     };
 
+    // Allocate scratch buffers once for the entire transpose phase
+    let mut v_adjacent: Vec<usize> = Vec::with_capacity(64);
+    let mut w_adjacent: Vec<usize> = Vec::with_capacity(64);
+
     while improved {
         improved = false;
         for r in iterate(iter_dir, order.max_rank()) {
@@ -380,8 +393,10 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
             for i in 0..order._inner[r].len() - 1 {
                 let v = order._inner[r][i];
                 let w = order._inner[r][i + 1];
-                let v_w_crossing = order.cross_count_two_vertices(v, w, graph);
-                let w_v_crossing = order.cross_count_two_vertices(w, v, graph);
+                let v_w_crossing =
+                    order.cross_count_two_vertices(v, w, graph, &mut v_adjacent, &mut w_adjacent);
+                let w_v_crossing =
+                    order.cross_count_two_vertices(w, v, graph, &mut v_adjacent, &mut w_adjacent);
                 if v_w_crossing > w_v_crossing {
                     improved = true;
                     order.exchange(i, i + 1, r);
@@ -394,8 +409,8 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
 
 fn order_layer(
     graph: &StableDiGraph<Vertex, Edge>,
-    move_down: bool,
     cur_order: &Order,
+    move_down: bool,
     cm_method: CMMethod,
 ) -> Order {
     let node_bound = cur_order.node_bound;
