@@ -343,7 +343,7 @@ mod order {
         graph.add_edge(n1, s0, Edge::default());
         graph.add_edge(n2, s0, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2], vec![s0, s1]]);
+        let order = Order::new(vec![vec![n0, n1, n2], vec![s0, s1]], graph.node_count());
         assert_eq!(order.bilayer_cross_count(&graph, 0), 2);
     }
 
@@ -364,7 +364,7 @@ mod order {
         graph.add_edge(n2, s1, Edge::default());
         graph.add_edge(n3, s0, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2, n3], vec![s0, s1, s2, s3]]);
+        let order = Order::new(vec![vec![n0, n1, n2, n3], vec![s0, s1, s2, s3]], graph.node_count());
 
         assert_eq!(order.bilayer_cross_count(&graph, 0), 6);
     }
@@ -396,7 +396,7 @@ mod order {
         g.add_edge(n5, s2, Edge::default());
         g.add_edge(n5, s4, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2, n3, n4, n5], vec![s0, s1, s2, s3, s4]]);
+        let order = Order::new(vec![vec![n0, n1, n2, n3, n4, n5], vec![s0, s1, s2, s3, s4]], g.node_count());
         assert_eq!(order.crossings(&g), 12);
     }
 
@@ -431,7 +431,7 @@ mod order {
             vec![n0, n2, n4, n3, n6, n7, n1, n5],
             vec![s0, s1, s2, s3, s4],
         ];
-        let order = Order::new(_inner);
+        let order = Order::new(_inner, graph.node_count());
         let expected_order = order_layer(
             &graph,
             false,
