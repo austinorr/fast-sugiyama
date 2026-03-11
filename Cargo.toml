@@ -15,6 +15,7 @@ readme = "README.md"
 [workspace.dependencies]
 rust-sugiyama = { path = "crates/rust-sugiyama" }
 
+criterion = { version = "0.8", features = ["html_reports"] }
 log = "0.4"
 petgraph = { version = "0.8", default-features = false, features = [
     "stable_graph",

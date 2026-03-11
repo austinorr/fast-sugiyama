@@ -3,14 +3,14 @@
 /// Date Cited: 2025/10/04
 ///
 /// Creates a graph with `num_nodes` vertices, which have `edges_per_node` edges.
-/// The layout of the graph is layered, where it grows from one vertice to a certain maximum with
-/// and then starts shrinking again to one vertice at the bottom layer:
-/// ```ignore
-///             /---v---\
-///          /-v-\    /-v-\
-///         v    v   v    v
-///          \-v-/   \-v-/
-///            \---v---/
+/// The layout of the graph is layered, where it grows from one vertex to a certain maximum with
+/// and then starts shrinking again to one vertex at the bottom layer:
+/// ```text
+///            /----v----\
+///          /-v-\     /-v-\
+///         v     v   v     v
+///          \-v-/     \-v-/
+///            \----v----/
 /// ```
 /// The number of layers depends on the number of vertices.
 /// More specifically, if edges^(n) - 1 + edges^(n - 1) <= num_vertices <= edges^(n+1) - 1 + edges^(n),

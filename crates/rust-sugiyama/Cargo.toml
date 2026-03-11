@@ -22,9 +22,21 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 [dependencies]
 log = { workspace = true }
 petgraph = { workspace = true }
+rand = { workspace = true, optional = true }
 
 
 [dev-dependencies]
+rust-sugiyama = { path = ".", features = ["rand"] }
 env_logger = "*"
+criterion = { workspace = true }
 rand = { workspace = true }
 svg = { workspace = true }
+
+[features]
+default = []
+rand = ["dep:rand"]
+
+[[bench]]
+name = "layout"
+harness = false
+required-features = ["rand"]
