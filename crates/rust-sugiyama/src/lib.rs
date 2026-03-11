@@ -10,6 +10,7 @@ use petgraph::{graph::NodeIndex, stable_graph::StableDiGraph};
 mod algorithm;
 pub mod configure;
 mod util;
+pub use util::graph_generator;
 
 type Positions<T> = Vec<(T, (f64, f64))>;
 type Layout<T> = (Positions<T>, f64, f64, Option<Vec<(T, T)>>);
