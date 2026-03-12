@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use log::{debug, info, trace};
 use petgraph::Direction::Incoming;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
-use petgraph::visit::EdgeRef;
+use petgraph::visit::{EdgeRef, NodeIndexable};
 
 use super::{COORD_CALC_LOG_TARGET, Edge, Vertex, slack};
 
@@ -15,7 +15,11 @@ pub(super) fn create_layouts(
     layers: &mut [Vec<NodeIndex>],
 ) -> Vec<HashMap<NodeIndex, f64>> {
     info!(target: COORD_CALC_LOG_TARGET, "Creating individual layouts for coordinate calculation");
-    let mut layouts = Vec::new();
+    let mut layouts = Vec::with_capacity(4);
+    // Pre-allocate buffers once and reuse across all 4 layout passes
+    let node_bound = graph.node_bound();
+    let mut x_coordinates = vec![0.0f64; node_bound];
+    let mut visited_buf = vec![false; node_bound];
     mark_type_1_conflicts(graph, layers);
     // calculate the coordinates for each direction
     for _v_dir in [VDir::Down, VDir::Up] {
@@ -30,7 +34,8 @@ pub(super) fn create_layouts(
 
             reset_alignment(graph, layers);
             create_vertical_alignments(graph, layers);
-            let mut layout = do_horizontal_compaction(graph, layers);
+            let mut layout =
+                do_horizontal_compaction(graph, layers, &mut x_coordinates, &mut visited_buf);
             // flip x_coordinates if we went from right to left
             if let HDir::Left = h_dir {
                 layout.values_mut().for_each(|x| *x = -*x);
@@ -250,11 +255,18 @@ fn create_vertical_alignments(
 fn do_horizontal_compaction(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &[Vec<NodeIndex>],
+    x_coordinates: &mut Vec<f64>,
+    visited_buf: &mut Vec<bool>,
 ) -> HashMap<NodeIndex, f64> {
     info!(target: COORD_CALC_LOG_TARGET, "calculating coordinates for layout.");
+    // Reset buffers for this pass
+    x_coordinates.fill(0.0);
+    visited_buf.fill(false);
+
     compute_block_max_vertex_widths(graph);
 
-    let mut x_coordinates = place_blocks(graph, layers);
+    place_blocks(graph, layers, x_coordinates, visited_buf);
+
     // calculate class shifts
     info!(target: COORD_CALC_LOG_TARGET, "move blocks as close together as possible");
     for i in 0..layers.len() {
@@ -279,8 +291,8 @@ fn do_horizontal_compaction(
                         let gap = (graph[v].block_max_vertex_width
                             + graph[u].block_max_vertex_width)
                             * 0.5;
-                        let distance_v_u = *x_coordinates.get(&v).unwrap()
-                            - (*x_coordinates.get(&u).unwrap() + gap);
+                        let distance_v_u =
+                            x_coordinates[v.index()] - (x_coordinates[u.index()] + gap);
                         let u_sink = graph[u].sink;
                         graph[u_sink].shift = graph[u_sink]
                             .shift
@@ -296,12 +308,13 @@ fn do_horizontal_compaction(
         }
     }
 
-    // calculate absolute x-coordinates
+    // calculate absolute x-coordinates and collect into HashMap for callers
+    let mut result = HashMap::with_capacity(graph.node_count());
     for v in graph.node_indices() {
-        let x = *x_coordinates.get(&v).unwrap() + graph[graph[v].sink].shift;
-        x_coordinates.insert(v, x);
+        let x = x_coordinates[v.index()] + graph[graph[v].sink].shift;
+        result.insert(v, x);
     }
-    x_coordinates
+    result
 }
 
 /// Computes the maximum width of the vertices in each block and assigns the
@@ -338,34 +351,36 @@ fn compute_block_max_vertex_widths(graph: &mut StableDiGraph<Vertex, Edge>) {
 fn place_blocks(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &[Vec<NodeIndex>],
-) -> HashMap<NodeIndex, f64> {
+    x_coordinates: &mut Vec<f64>,
+    visited_buf: &mut Vec<bool>,
+) {
     info!(target: COORD_CALC_LOG_TARGET, "Placing vertices in blocks.");
-    let mut x_coordinates = HashMap::new();
-    // place blocks
     for root in graph
         .node_indices()
         .filter(|v| graph[*v].root == *v)
         .collect::<Vec<_>>()
     {
-        place_block(graph, layers, root, &mut x_coordinates);
+        place_block(graph, layers, root, x_coordinates, visited_buf);
     }
-    x_coordinates
 }
+
 fn place_block(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &[Vec<NodeIndex>],
     root: NodeIndex,
-    x_coordinates: &mut HashMap<NodeIndex, f64>,
+    x_coordinates: &mut Vec<f64>,
+    visited_buf: &mut Vec<bool>,
 ) {
-    if x_coordinates.get(&root).is_some() {
+    if visited_buf[root.index()] {
         return;
     }
-    x_coordinates.insert(root, 0.0);
+    visited_buf[root.index()] = true;
+    x_coordinates[root.index()] = 0.0;
     let mut w = root;
     loop {
         if graph[w].pos > 0 {
             let u = graph[pred(graph[w], layers)].root;
-            place_block(graph, layers, u, x_coordinates);
+            place_block(graph, layers, u, x_coordinates, visited_buf);
             // initialize sink of current node to have the same sink as the root
             if graph[root].sink == root {
                 graph[root].sink = graph[u].sink;
@@ -373,13 +388,8 @@ fn place_block(
             if graph[root].sink == graph[u].sink {
                 let gap =
                     (graph[root].block_max_vertex_width + graph[u].block_max_vertex_width) * 0.5;
-                x_coordinates.insert(
-                    root,
-                    x_coordinates
-                        .get(&root)
-                        .unwrap()
-                        .max(x_coordinates.get(&u).unwrap() + gap),
-                );
+                let new_x = x_coordinates[root.index()].max(x_coordinates[u.index()] + gap);
+                x_coordinates[root.index()] = new_x;
             }
         }
         w = graph[w].align;
@@ -390,7 +400,7 @@ fn place_block(
     // align all other vertices in this block to the x-coordinate of the root
     while graph[w].align != root {
         w = graph[w].align;
-        x_coordinates.insert(w, *x_coordinates.get(&root).unwrap());
+        x_coordinates[w.index()] = x_coordinates[root.index()];
         graph[w].sink = graph[root].sink;
     }
 }
