@@ -21,6 +21,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use log::{debug, info};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
+use rayon::prelude::*;
 
 use crate::configure::{
     COORD_CALC_LOG_TARGET, CYCLE_LOG_TARGET, Config, CrossingMinimization, INIT_LOG_TARGET,
@@ -115,7 +116,7 @@ pub(super) fn start(graph: &StableDiGraph<Vertex, Edge>, config: &Config) -> Lay
         .fold(0usize, |max, n| max.max(n.index()));
 
     weakly_connected_components(graph)
-        .into_iter()
+        .into_par_iter()
         .map(|mut g| {
             init_graph(&mut g);
             let (positions, w, h, edges) = build_layout(&mut g, config, dummy_id_offset);

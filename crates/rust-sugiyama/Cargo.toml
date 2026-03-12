@@ -23,6 +23,7 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 log = { workspace = true }
 petgraph = { workspace = true }
 rand = { workspace = true, optional = true }
+rayon = { workspace = true }
 
 
 [dev-dependencies]
