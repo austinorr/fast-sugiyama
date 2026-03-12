@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
-
 use log::{debug, info, trace};
 use petgraph::Direction::Incoming;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
@@ -13,7 +11,7 @@ use super::{COORD_CALC_LOG_TARGET, Edge, Vertex, slack};
 pub(super) fn create_layouts(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &mut [Vec<NodeIndex>],
-) -> Vec<HashMap<NodeIndex, f64>> {
+) -> Vec<Vec<f64>> {
     info!(target: COORD_CALC_LOG_TARGET, "Creating individual layouts for coordinate calculation");
     let mut layouts = Vec::with_capacity(4);
     // Pre-allocate buffers once and reuse across all 4 layout passes
@@ -38,7 +36,7 @@ pub(super) fn create_layouts(
                 do_horizontal_compaction(graph, layers, &mut x_coordinates, &mut visited_buf);
             // flip x_coordinates if we went from right to left
             if let HDir::Left = h_dir {
-                layout.values_mut().for_each(|x| *x = -*x);
+                layout.iter_mut().for_each(|x| *x = -*x);
             }
             // print_to_console(v_dir, graph, &orig_layers, layout.clone(), vertex_spacing);
             layouts.push(layout);
@@ -57,16 +55,22 @@ pub(super) fn create_layouts(
     layouts
 }
 
-pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<NodeIndex, f64>]) {
+pub(crate) fn align_to_smallest_width_layout(
+    graph: &mut StableDiGraph<Vertex, Edge>,
+    aligned_layouts: &mut [Vec<f64>],
+    // node_indices: &[NodeIndex],
+) {
     info!(target: COORD_CALC_LOG_TARGET, "Aligning all layouts to the one with the smallest width");
+
     // determine minimum and maximum coordinate of each layout, plus the width
     let min_max: Vec<(f64, f64, f64)> = aligned_layouts
         .iter()
         .map(|c| {
-            let (min, max) = c
-                .values()
+            let (min, max) = graph
+                .node_indices()
+                .map(|v| c[v.index()])
                 .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), x| {
-                    (min.min(*x), max.max(*x))
+                    (min.min(x), max.max(x))
                 });
             (min, max, max - min)
         })
@@ -88,45 +92,44 @@ pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<Node
         } else {
             min_max[min_width].1 - min_max[i].1
         };
-        for v in layout.values_mut() {
-            let new = *v + shift;
-            *v = new;
+        for v in graph.node_indices() {
+            layout[v.index()] += shift;
         }
     }
 }
 
 pub(crate) fn calculate_relative_coords(
-    aligned_layouts: Vec<HashMap<NodeIndex, f64>>,
-) -> Vec<(NodeIndex, f64)> {
+    graph: &mut StableDiGraph<Vertex, Edge>,
+    aligned_layouts: Vec<Vec<f64>>,
+) -> Vec<f64> {
     info!(target: COORD_CALC_LOG_TARGET,
         "Calculate relative coordinates, by taking average between two medians of absolute x-coordinates for each layout direction");
     // sort all 4 coordinates per vertex in ascending order
     for l in &aligned_layouts {
-        let mut v = l.iter().collect::<Vec<_>>();
+        let mut v: Vec<_> = graph.node_indices().map(|n| (n, l[n.index()])).collect();
         v.sort_by(|a, b| a.0.index().cmp(&b.0.index()));
         // format to NodeIndex: (x, y), width, height
     }
-    let mut sorted_layouts = HashMap::new();
-    for k in aligned_layouts.first().unwrap().keys() {
+
+    let node_bound = aligned_layouts[0].len();
+    let mut result = vec![0.0f64; node_bound];
+
+    for v in graph.node_indices() {
+        let i = v.index();
         let mut vertex_coordinates = [
-            *aligned_layouts[0].get(k).unwrap(),
-            *aligned_layouts[1].get(k).unwrap(),
-            *aligned_layouts[2].get(k).unwrap(),
-            *aligned_layouts[3].get(k).unwrap(),
+            aligned_layouts[0][i],
+            aligned_layouts[1][i],
+            aligned_layouts[2][i],
+            aligned_layouts[3][i],
         ];
         vertex_coordinates.sort_by(|a, b| a.total_cmp(b));
-        sorted_layouts.insert(k, vertex_coordinates);
-        trace!(target: COORD_CALC_LOG_TARGET, "vertex {k:?} candidate coordinates: {vertex_coordinates:?}");
+        trace!(target: COORD_CALC_LOG_TARGET, "vertex {v:?} candidate coordinates: {vertex_coordinates:?}");
+        // "the average median is order and separation preserving" [Brandes & Kopf, 2001]
+        result[i] = avg_median4(vertex_coordinates);
     }
 
-    debug!(target: COORD_CALC_LOG_TARGET, "Sorted Layouts: {sorted_layouts:?}");
-
-    // create final layout, by averaging the two median values
-    sorted_layouts
-        .into_iter()
-        // "the average median is order and separation preserving" [Brandes & Kopf, 2001]
-        .map(|(k, v)| (*k, avg_median4(v)))
-        .collect::<Vec<_>>()
+    debug!(target: COORD_CALC_LOG_TARGET, "Final coordinates: {result:?}");
+    result
 }
 
 #[inline(always)]
@@ -257,7 +260,7 @@ fn do_horizontal_compaction(
     layers: &[Vec<NodeIndex>],
     x_coordinates: &mut Vec<f64>,
     visited_buf: &mut Vec<bool>,
-) -> HashMap<NodeIndex, f64> {
+) -> Vec<f64> {
     info!(target: COORD_CALC_LOG_TARGET, "calculating coordinates for layout.");
     // Reset buffers for this pass
     x_coordinates.fill(0.0);
@@ -308,11 +311,10 @@ fn do_horizontal_compaction(
         }
     }
 
-    // calculate absolute x-coordinates and collect into HashMap for callers
-    let mut result = HashMap::with_capacity(graph.node_count());
+    // calculate absolute x-coordinates into a Vec indexed by NodeIndex
+    let mut result = vec![0.0f64; x_coordinates.len()];
     for v in graph.node_indices() {
-        let x = x_coordinates[v.index()] + graph[graph[v].sink].shift;
-        result.insert(v, x);
+        result[v.index()] = x_coordinates[v.index()] + graph[graph[v].sink].shift;
     }
     result
 }
