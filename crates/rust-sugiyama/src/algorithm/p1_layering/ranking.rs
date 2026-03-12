@@ -29,10 +29,33 @@ pub(super) fn feasible_tree(graph: &mut StableDiGraph<Vertex, Edge>, minimum_len
     let tree_root = graph.node_indices().next().unwrap();
     trace!(target: RANKING_LOG_TARGET, "root of tree is: {}", tree_root.index());
 
+    // Pre-allocated buffers reused across tight_tree calls:
+    // - tree_vertices: all current tree members, used by tighten_edge to avoid O(V) scan
+    // - incident_edges: boundary non-tree edges, replaces find_non_tight_edge's O(E) scan
+    let mut tree_vertices: Vec<NodeIndex> = Vec::with_capacity(graph.node_count());
+    let mut incident_edges: Vec<EdgeIndex> = Vec::new();
+
     info!(target: RANKING_LOG_TARGET, "Trying to build tight tree.");
-    while tight_tree(graph, tree_root, &mut HashSet::new(), minimum_length) < graph.node_count() {
+    while {
+        tree_vertices.clear();
+        incident_edges.clear();
+        tight_tree(
+            graph,
+            tree_root,
+            &mut HashSet::new(),
+            minimum_length,
+            &mut tree_vertices,
+            &mut incident_edges,
+        )
+    } < graph.node_count()
+    {
         debug!(target: RANKING_LOG_TARGET, "unable to build tight tree yet, finding edge which is not tight");
-        let edge = find_non_tight_edge(graph, minimum_length);
+        // Use incident_edges collected during tight_tree instead of scanning all edges
+        let edge = incident_edges
+            .iter()
+            .copied()
+            .min_by_key(|&e| slack(graph, e, minimum_length))
+            .unwrap();
         let (tail, head) = graph.edge_endpoints(edge).unwrap();
         debug!(target: RANKING_LOG_TARGET, "found edge: ({}, {})", tail.index(), head.index());
         let mut delta = slack(graph, edge, minimum_length);
@@ -41,7 +64,7 @@ pub(super) fn feasible_tree(graph: &mut StableDiGraph<Vertex, Edge>, minimum_len
             delta = -delta;
         }
 
-        tighten_edge(graph, delta);
+        tighten_edge(graph, delta, &tree_vertices);
     }
 
     init_cutvalues(graph);
@@ -100,21 +123,28 @@ pub(super) fn update_ranks(graph: &mut StableDiGraph<Vertex, Edge>, minimum_leng
     }
 }
 
-/// Builds a tight tree via depth first search
-/// Returns the number of vertices contained in the tree
+/// Builds a tight tree via depth first search.
+/// Returns the number of vertices contained in the tree.
+///
+/// Also populates:
+/// - `tree_vertices`: all vertices currently in the tree (for use by `tighten_edge`)
+/// - `incident_edges`: non-tree edges on the tree boundary with slack > 0 (replaces
+///   the O(E) scan in `find_non_tight_edge`)
 fn tight_tree(
     graph: &mut StableDiGraph<Vertex, Edge>,
     vertex: NodeIndex,
     visited: &mut HashSet<EdgeIndex>,
     minimum_length: i32,
+    tree_vertices: &mut Vec<NodeIndex>,
+    incident_edges: &mut Vec<EdgeIndex>,
 ) -> usize {
     // start from topmost nodes.
     // then for each topmost node add nodes to tree until done. Then continue with next node until no more nodes are found.
     trace!(target: RANKING_LOG_TARGET, "vertex: {}", vertex.index());
+    graph[vertex].is_tree_vertex = true;
+    // Push unconditionally — the visited-edge tracking ensures each vertex is visited once
+    tree_vertices.push(vertex);
     let mut node_count = 1;
-    if !graph[vertex].is_tree_vertex {
-        graph[vertex].is_tree_vertex = true;
-    }
 
     let mut neighbors = graph.neighbors_undirected(vertex).detach();
     while let Some(edge) = neighbors.next_edge(graph) {
@@ -124,11 +154,30 @@ fn tight_tree(
         if !visited.contains(&edge) {
             visited.insert(edge);
             if graph[edge].is_tree_edge {
-                node_count += tight_tree(graph, other, visited, minimum_length);
-            } else if slack(graph, edge, minimum_length) == 0 && !graph[other].is_tree_vertex {
-                trace!(target: RANKING_LOG_TARGET, "adding edge with minimum slack: {}", edge.index());
-                graph[edge].is_tree_edge = true;
-                node_count += tight_tree(graph, other, visited, minimum_length);
+                node_count += tight_tree(
+                    graph,
+                    other,
+                    visited,
+                    minimum_length,
+                    tree_vertices,
+                    incident_edges,
+                );
+            } else if !graph[other].is_tree_vertex {
+                if slack(graph, edge, minimum_length) == 0 {
+                    trace!(target: RANKING_LOG_TARGET, "adding edge with minimum slack: {}", edge.index());
+                    graph[edge].is_tree_edge = true;
+                    node_count += tight_tree(
+                        graph,
+                        other,
+                        visited,
+                        minimum_length,
+                        tree_vertices,
+                        incident_edges,
+                    );
+                } else {
+                    // Incident non-tree edge with slack > 0
+                    incident_edges.push(edge);
+                }
             }
         }
     }
@@ -155,25 +204,11 @@ pub(crate) fn init_rank(graph: &mut StableDiGraph<Vertex, Edge>, minimum_length:
     }
 }
 
-fn is_incident_edge(graph: &StableDiGraph<Vertex, Edge>, edge: &EdgeIndex) -> bool {
-    let (tail, head) = graph.edge_endpoints(*edge).unwrap();
-    graph[tail].is_tree_vertex ^ graph[head].is_tree_vertex
-}
-
-fn find_non_tight_edge(graph: &StableDiGraph<Vertex, Edge>, minimum_length: i32) -> EdgeIndex {
-    graph
-        .edge_indices()
-        .filter(|e| !graph[*e].is_tree_edge && is_incident_edge(graph, e))
-        .min_by(|e1, e2| slack(graph, *e1, minimum_length).cmp(&slack(graph, *e2, minimum_length)))
-        .unwrap()
-}
-
-fn tighten_edge(graph: &mut StableDiGraph<Vertex, Edge>, delta: i32) {
+fn tighten_edge(graph: &mut StableDiGraph<Vertex, Edge>, delta: i32, tree_vertices: &[NodeIndex]) {
     trace!(target: RANKING_LOG_TARGET, "tighten all other tree edges by adjusting ranks by: {}", delta);
-    for v in graph.node_indices().collect::<Vec<_>>() {
-        if graph[v].is_tree_vertex {
-            graph[v].rank += delta;
-        }
+    // Only iterate over known tree vertices
+    for &v in tree_vertices {
+        graph[v].rank += delta;
     }
 }
 
@@ -259,7 +294,14 @@ mod tests {
         let (mut graph, ..) = GraphBuilder::new(&EXAMPLE_GRAPH).build();
         init_rank(&mut graph, 1);
         let number_of_nodes = graph.node_count();
-        tight_tree(&mut graph, 0.into(), &mut HashSet::new(), 1);
+        tight_tree(
+            &mut graph,
+            0.into(),
+            &mut HashSet::new(),
+            1,
+            &mut Vec::new(),
+            &mut Vec::new(),
+        );
 
         assert_eq!(
             graph
@@ -282,7 +324,14 @@ mod tests {
         let (mut graph, ..) = GraphBuilder::new(&EXAMPLE_GRAPH).build();
         let number_of_nodes = graph.node_count();
         init_rank(&mut graph, 1);
-        tight_tree(&mut graph, 4.into(), &mut HashSet::new(), 1);
+        tight_tree(
+            &mut graph,
+            4.into(),
+            &mut HashSet::new(),
+            1,
+            &mut Vec::new(),
+            &mut Vec::new(),
+        );
 
         assert_eq!(
             graph
