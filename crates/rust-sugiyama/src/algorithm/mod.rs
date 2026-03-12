@@ -17,10 +17,12 @@
 //! See the submodules for each phase for more details on the implementation
 //! and references used.
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 
 use log::{debug, info};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableDiGraph};
-use petgraph::visit::{EdgeRef, IntoEdgeReferences};
+use petgraph::visit::{EdgeRef, IntoEdgeReferences, NodeIndexable};
 use rayon::prelude::*;
 
 use crate::configure::{
@@ -111,15 +113,16 @@ impl Default for Edge {
 }
 
 pub(super) fn start(graph: &StableDiGraph<Vertex, Edge>, config: &Config) -> Layouts<usize> {
-    let dummy_id_offset = graph
-        .node_indices()
-        .fold(0usize, |max, n| max.max(n.index()));
+    // Dummy node IDs must be globally unique across all components. Use an
+    // atomic counter starting above the original graph's node index space.
+    let dummy_id_counter = Arc::new(AtomicUsize::new(graph.node_bound()));
 
     weakly_connected_components(graph)
         .into_par_iter()
-        .map(|mut g| {
-            init_graph(&mut g);
-            let (positions, w, h, edges) = build_layout(&mut g, config, dummy_id_offset);
+        .map(|(mut g, orig_indices)| {
+            init_graph(&mut g, Some(orig_indices));
+            let counter = Arc::clone(&dummy_id_counter);
+            let (positions, w, h, edges) = build_layout(&mut g, config, &counter);
             if config.check_layout {
                 assert!(layout_is_valid(&positions))
             }
@@ -129,13 +132,16 @@ pub(super) fn start(graph: &StableDiGraph<Vertex, Edge>, config: &Config) -> Lay
         .collect()
 }
 
-fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
+fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>, ids: Option<Vec<NodeIndex>>) {
     info!(
         target: INIT_LOG_TARGET,
         "Initializing graphs vertex weights"
     );
     for id in graph.node_indices().collect::<Vec<_>>() {
-        graph[id].id = id.index();
+        graph[id].id = match &ids {
+            Some(orig) => orig[id.index()].index(),
+            None => id.index(),
+        };
         graph[id].root = id;
         graph[id].align = id;
         graph[id].sink = id;
@@ -145,7 +151,7 @@ fn init_graph(graph: &mut StableDiGraph<Vertex, Edge>) {
 fn build_layout(
     graph: &mut StableDiGraph<Vertex, Edge>,
     config: &Config,
-    dummy_id_offset: usize,
+    dummy_id_counter: &AtomicUsize,
 ) -> Layout<usize> {
     info!(target: LAYOUT_LOG_TARGET, "Start building layout");
     info!(target: LAYOUT_LOG_TARGET, "Configuration is: {:?}", config);
@@ -169,7 +175,7 @@ fn build_layout(
         (config.dummy_vertices || config.dummy_size > 0.0).then_some(config.dummy_size),
         config.c_minimization,
         config.transpose,
-        dummy_id_offset,
+        dummy_id_counter,
     );
 
     let layout = execute_phase_3(graph, layers, config.dummy_vertices);
@@ -204,7 +210,7 @@ fn execute_phase_2(
     dummy_size: Option<f64>,
     crossing_minimization: CrossingMinimization,
     transpose: bool,
-    dummy_id_offset: usize,
+    dummy_id_counter: &AtomicUsize,
 ) -> Vec<Vec<NodeIndex>> {
     info!(target: LAYOUT_LOG_TARGET, "Executing phase 2: Crossing Reduction");
 
@@ -212,7 +218,7 @@ fn execute_phase_2(
         graph,
         minimum_length,
         dummy_size.unwrap_or(0.0),
-        dummy_id_offset,
+        dummy_id_counter,
     );
     let mut order = p2::ordering(graph, crossing_minimization, transpose);
     if dummy_size.is_none() {
