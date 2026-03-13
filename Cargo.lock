@@ -693,6 +693,7 @@ dependencies = [
  "log",
  "petgraph",
  "rand",
+ "rayon",
  "rust-sugiyama",
  "svg",
 ]

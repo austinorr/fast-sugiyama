@@ -157,6 +157,7 @@ impl GraphBuilder {
 mod insert_dummy_vertices {
 
     use petgraph::stable_graph::StableDiGraph;
+    use std::sync::atomic::AtomicUsize;
 
     use crate::{
         algorithm::p2_reduce_crossings::{
@@ -176,7 +177,7 @@ mod insert_dummy_vertices {
         let (mut graph, minimum_length) =
             GraphBuilder::new_from_edges_with_ranking(&ONE_DUMMY, &ONE_DUMMY_RANKS).build();
         let n_vertices = graph.node_count();
-        insert_dummy_vertices(&mut graph, minimum_length, 0.0, 0);
+        insert_dummy_vertices(&mut graph, minimum_length, 0.0, &AtomicUsize::new(0));
         // one dummy vertex
         assert_eq!(graph.node_weights().filter(|w| w.is_dummy).count(), 1);
         // one more vertex
@@ -188,7 +189,7 @@ mod insert_dummy_vertices {
         let (mut graph, minimum_length) =
             GraphBuilder::new_from_edges_with_ranking(&THREE_DUMMIES, &THREE_DUMMIES_RANKS).build();
         let n_vertices = graph.node_count();
-        insert_dummy_vertices(&mut graph, minimum_length, 0.0, 0);
+        insert_dummy_vertices(&mut graph, minimum_length, 0.0, &AtomicUsize::new(0));
         // one dummy vertex
         assert_eq!(graph.node_weights().filter(|w| w.is_dummy).count(), 3);
         // one more vertex
@@ -201,7 +202,7 @@ mod insert_dummy_vertices {
             GraphBuilder::new_from_edges_with_ranking(&COMPLEX_EXAMPLE, &COMPLEX_EXAMPLE_RANKS)
                 .build();
         let n_vertices = graph.node_count();
-        insert_dummy_vertices(&mut graph, minimum_length, 0.0, 0);
+        insert_dummy_vertices(&mut graph, minimum_length, 0.0, &AtomicUsize::new(0));
         // one dummy vertex
         assert_eq!(graph.node_weights().filter(|w| w.is_dummy).count(), 7);
         // one more vertex
@@ -268,6 +269,7 @@ mod insert_dummy_vertices {
 
 mod init_order {
     use crate::algorithm::p2_reduce_crossings::insert_dummy_vertices;
+    use std::sync::atomic::AtomicUsize;
 
     use super::{
         COMPLEX_EXAMPLE, COMPLEX_EXAMPLE_RANKS, GraphBuilder, ONE_DUMMY, ONE_DUMMY_RANKS,
@@ -278,7 +280,7 @@ mod init_order {
     fn all_neighbors_must_be_at_adjacent_level_one_dummy() {
         let (mut graph, minimum_length) =
             GraphBuilder::new_from_edges_with_ranking(&ONE_DUMMY, &ONE_DUMMY_RANKS).build();
-        insert_dummy_vertices(&mut graph, minimum_length, 0.0, 0);
+        insert_dummy_vertices(&mut graph, minimum_length, 0.0, &AtomicUsize::new(0));
         for v in graph.node_indices() {
             let rank = graph[v].rank;
             for n in graph.neighbors_undirected(v) {
@@ -291,7 +293,7 @@ mod init_order {
     fn all_neighbors_must_be_at_adjacent_level_three_dummies() {
         let (mut graph, minimum_length) =
             GraphBuilder::new_from_edges_with_ranking(&THREE_DUMMIES, &THREE_DUMMIES_RANKS).build();
-        insert_dummy_vertices(&mut graph, minimum_length, 0.0, 0);
+        insert_dummy_vertices(&mut graph, minimum_length, 0.0, &AtomicUsize::new(0));
         for v in graph.node_indices() {
             let rank = graph[v].rank;
             for n in graph.neighbors_undirected(v) {
@@ -306,7 +308,7 @@ mod init_order {
             GraphBuilder::new_from_edges_with_ranking(&COMPLEX_EXAMPLE, &COMPLEX_EXAMPLE_RANKS)
                 .build();
 
-        insert_dummy_vertices(&mut graph, minimum_length, 0.0, 0);
+        insert_dummy_vertices(&mut graph, minimum_length, 0.0, &AtomicUsize::new(0));
         for v in graph.node_indices() {
             let rank = graph[v].rank;
             for n in graph.neighbors_undirected(v) {
@@ -343,7 +345,7 @@ mod order {
         graph.add_edge(n1, s0, Edge::default());
         graph.add_edge(n2, s0, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2], vec![s0, s1]]);
+        let order = Order::new(vec![vec![n0, n1, n2], vec![s0, s1]], graph.node_count());
         assert_eq!(order.bilayer_cross_count(&graph, 0), 2);
     }
 
@@ -364,7 +366,10 @@ mod order {
         graph.add_edge(n2, s1, Edge::default());
         graph.add_edge(n3, s0, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2, n3], vec![s0, s1, s2, s3]]);
+        let order = Order::new(
+            vec![vec![n0, n1, n2, n3], vec![s0, s1, s2, s3]],
+            graph.node_count(),
+        );
 
         assert_eq!(order.bilayer_cross_count(&graph, 0), 6);
     }
@@ -396,7 +401,10 @@ mod order {
         g.add_edge(n5, s2, Edge::default());
         g.add_edge(n5, s4, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2, n3, n4, n5], vec![s0, s1, s2, s3, s4]]);
+        let order = Order::new(
+            vec![vec![n0, n1, n2, n3, n4, n5], vec![s0, s1, s2, s3, s4]],
+            g.node_count(),
+        );
         assert_eq!(order.crossings(&g), 12);
     }
 
@@ -431,11 +439,11 @@ mod order {
             vec![n0, n2, n4, n3, n6, n7, n1, n5],
             vec![s0, s1, s2, s3, s4],
         ];
-        let order = Order::new(_inner);
+        let order = Order::new(_inner, graph.node_count());
         let expected_order = order_layer(
             &graph,
-            false,
             &order,
+            false,
             crate::algorithm::p2_reduce_crossings::barycenter,
         );
         assert_eq!(

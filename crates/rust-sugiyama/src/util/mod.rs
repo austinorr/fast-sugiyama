@@ -1,12 +1,19 @@
 use crate::Layout;
 use log::{debug, info};
+use petgraph::Direction::Outgoing;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
+use petgraph::visit::{EdgeRef, NodeIndexable};
 use std::collections::{BTreeSet, HashMap, HashSet};
 pub mod graph_generator;
 
+/// Splits `graph` into its weakly connected components.
+///
+/// Returns each component as a compact `StableDiGraph` (node indices 0..N)
+/// paired with a `Vec<NodeIndex>` that maps each new compact index back to
+/// the corresponding node index in the original graph.
 pub fn weakly_connected_components<V: Copy, E: Copy>(
     graph: &StableDiGraph<V, E>,
-) -> Vec<StableDiGraph<V, E>> {
+) -> Vec<(StableDiGraph<V, E>, Vec<NodeIndex>)> {
     info!(target: "connected_components", "Splitting graph into its connected components");
     let mut components = Vec::new();
     let mut visited = HashSet::new();
@@ -17,21 +24,47 @@ pub fn weakly_connected_components<V: Copy, E: Copy>(
         }
 
         let component_nodes = component_dfs(node, graph);
-        let component = graph.filter_map(
-            |n, w| {
-                if component_nodes.contains(&n) {
-                    Some(*w)
-                } else {
-                    None
+
+        // Single component
+        if component_nodes.len() == graph.node_bound() {
+            // Single component, already compact indices — but rebuild to
+            // reorder edge storage for cache locality.
+            let mut compact = StableDiGraph::new();
+            for n in graph.node_indices() {
+                compact.add_node(graph[n]);
+            }
+            for n in graph.node_indices() {
+                for edge in graph.edges_directed(n, Outgoing) {
+                    compact.add_edge(n, edge.target(), *edge.weight());
                 }
-            },
-            |_, w| Some(*w),
-        );
+            }
+            let orig_indices = graph.node_indices().collect();
+            components.push((compact, orig_indices));
+            break;
+        }
+
+        // Build a compact subgraph so that node_bound() == node_count(),
+        // avoiding wasted Vec allocations in downstream phases.
+        let mut component: StableDiGraph<V, E> = StableDiGraph::new();
+        let mut node_map: HashMap<NodeIndex, NodeIndex> = HashMap::new();
+
+        // Sort for deterministic node ordering in the compact graph.
+        let mut orig_indices: Vec<NodeIndex> = component_nodes.iter().copied().collect();
+        orig_indices.sort_unstable();
+
+        for &n in &orig_indices {
+            node_map.insert(n, component.add_node(graph[n]));
+        }
+        for &n in &orig_indices {
+            for edge in graph.edges_directed(n, Outgoing) {
+                component.add_edge(node_map[&n], node_map[&edge.target()], *edge.weight());
+            }
+        }
 
         component_nodes.into_iter().for_each(|n| {
             visited.insert(n);
         });
-        components.push(component);
+        components.push((component, orig_indices));
     }
     debug!(target: "connected_components", "Found {} components", components.len());
 
@@ -63,13 +96,18 @@ fn component_dfs<V: Copy, E: Copy>(
 #[test]
 fn into_weakly_connected_components_two_components() {
     let g = StableDiGraph::<usize, usize>::from_edges([(0, 1), (1, 2), (3, 2), (4, 5), (4, 6)]);
-    let sgs = weakly_connected_components(&g);
+    let sgs: Vec<StableDiGraph<usize, usize>> = weakly_connected_components(&g)
+        .into_iter()
+        .map(|(sg, _)| sg)
+        .collect();
     assert_eq!(sgs.len(), 2);
+    // Component 0: original nodes {0,1,2,3} → compact indices 0,1,2,3 (same order)
     assert!(sgs[0].contains_edge(0.into(), 1.into()));
     assert!(sgs[0].contains_edge(1.into(), 2.into()));
     assert!(sgs[0].contains_edge(3.into(), 2.into()));
-    assert!(sgs[1].contains_edge(4.into(), 5.into()));
-    assert!(sgs[1].contains_edge(4.into(), 6.into()));
+    // Component 1: original nodes {4,5,6} → compact indices 0,1,2
+    assert!(sgs[1].contains_edge(0.into(), 1.into()));
+    assert!(sgs[1].contains_edge(0.into(), 2.into()));
 }
 
 // TODO: refactor into trait

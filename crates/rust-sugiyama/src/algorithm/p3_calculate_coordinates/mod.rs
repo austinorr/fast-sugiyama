@@ -1,21 +1,23 @@
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
-
 use log::{debug, info, trace};
 use petgraph::Direction::Incoming;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
-use petgraph::visit::EdgeRef;
+use petgraph::visit::{EdgeRef, NodeIndexable};
 
 use super::{COORD_CALC_LOG_TARGET, Edge, Vertex, slack};
 
 pub(super) fn create_layouts(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &mut [Vec<NodeIndex>],
-) -> Vec<HashMap<NodeIndex, f64>> {
+) -> Vec<Vec<f64>> {
     info!(target: COORD_CALC_LOG_TARGET, "Creating individual layouts for coordinate calculation");
-    let mut layouts = Vec::new();
+    let mut layouts = Vec::with_capacity(4);
+    // Pre-allocate buffers once and reuse across all 4 layout passes
+    let node_bound = graph.node_bound();
+    let mut x_coordinates = vec![0.0f64; node_bound];
+    let mut visited_buf = vec![false; node_bound];
     mark_type_1_conflicts(graph, layers);
     // calculate the coordinates for each direction
     for _v_dir in [VDir::Down, VDir::Up] {
@@ -30,10 +32,11 @@ pub(super) fn create_layouts(
 
             reset_alignment(graph, layers);
             create_vertical_alignments(graph, layers);
-            let mut layout = do_horizontal_compaction(graph, layers);
+            let mut layout =
+                do_horizontal_compaction(graph, layers, &mut x_coordinates, &mut visited_buf);
             // flip x_coordinates if we went from right to left
             if let HDir::Left = h_dir {
-                layout.values_mut().for_each(|x| *x = -*x);
+                layout.iter_mut().for_each(|x| *x = -*x);
             }
             // print_to_console(v_dir, graph, &orig_layers, layout.clone(), vertex_spacing);
             layouts.push(layout);
@@ -52,16 +55,22 @@ pub(super) fn create_layouts(
     layouts
 }
 
-pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<NodeIndex, f64>]) {
+pub(crate) fn align_to_smallest_width_layout(
+    graph: &mut StableDiGraph<Vertex, Edge>,
+    aligned_layouts: &mut [Vec<f64>],
+    // node_indices: &[NodeIndex],
+) {
     info!(target: COORD_CALC_LOG_TARGET, "Aligning all layouts to the one with the smallest width");
+
     // determine minimum and maximum coordinate of each layout, plus the width
     let min_max: Vec<(f64, f64, f64)> = aligned_layouts
         .iter()
         .map(|c| {
-            let (min, max) = c
-                .values()
+            let (min, max) = graph
+                .node_indices()
+                .map(|v| c[v.index()])
                 .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), x| {
-                    (min.min(*x), max.max(*x))
+                    (min.min(x), max.max(x))
                 });
             (min, max, max - min)
         })
@@ -83,45 +92,44 @@ pub(crate) fn align_to_smallest_width_layout(aligned_layouts: &mut [HashMap<Node
         } else {
             min_max[min_width].1 - min_max[i].1
         };
-        for v in layout.values_mut() {
-            let new = *v + shift;
-            *v = new;
+        for v in graph.node_indices() {
+            layout[v.index()] += shift;
         }
     }
 }
 
 pub(crate) fn calculate_relative_coords(
-    aligned_layouts: Vec<HashMap<NodeIndex, f64>>,
-) -> Vec<(NodeIndex, f64)> {
+    graph: &mut StableDiGraph<Vertex, Edge>,
+    aligned_layouts: Vec<Vec<f64>>,
+) -> Vec<f64> {
     info!(target: COORD_CALC_LOG_TARGET,
         "Calculate relative coordinates, by taking average between two medians of absolute x-coordinates for each layout direction");
     // sort all 4 coordinates per vertex in ascending order
     for l in &aligned_layouts {
-        let mut v = l.iter().collect::<Vec<_>>();
+        let mut v: Vec<_> = graph.node_indices().map(|n| (n, l[n.index()])).collect();
         v.sort_by(|a, b| a.0.index().cmp(&b.0.index()));
         // format to NodeIndex: (x, y), width, height
     }
-    let mut sorted_layouts = HashMap::new();
-    for k in aligned_layouts.first().unwrap().keys() {
+
+    let node_bound = aligned_layouts[0].len();
+    let mut result = vec![0.0f64; node_bound];
+
+    for v in graph.node_indices() {
+        let i = v.index();
         let mut vertex_coordinates = [
-            *aligned_layouts[0].get(k).unwrap(),
-            *aligned_layouts[1].get(k).unwrap(),
-            *aligned_layouts[2].get(k).unwrap(),
-            *aligned_layouts[3].get(k).unwrap(),
+            aligned_layouts[0][i],
+            aligned_layouts[1][i],
+            aligned_layouts[2][i],
+            aligned_layouts[3][i],
         ];
         vertex_coordinates.sort_by(|a, b| a.total_cmp(b));
-        sorted_layouts.insert(k, vertex_coordinates);
-        trace!(target: COORD_CALC_LOG_TARGET, "vertex {k:?} candidate coordinates: {vertex_coordinates:?}");
+        trace!(target: COORD_CALC_LOG_TARGET, "vertex {v:?} candidate coordinates: {vertex_coordinates:?}");
+        // "the average median is order and separation preserving" [Brandes & Kopf, 2001]
+        result[i] = avg_median4(vertex_coordinates);
     }
 
-    debug!(target: COORD_CALC_LOG_TARGET, "Sorted Layouts: {sorted_layouts:?}");
-
-    // create final layout, by averaging the two median values
-    sorted_layouts
-        .into_iter()
-        // "the average median is order and separation preserving" [Brandes & Kopf, 2001]
-        .map(|(k, v)| (*k, avg_median4(v)))
-        .collect::<Vec<_>>()
+    debug!(target: COORD_CALC_LOG_TARGET, "Final coordinates: {result:?}");
+    result
 }
 
 #[inline(always)]
@@ -250,11 +258,18 @@ fn create_vertical_alignments(
 fn do_horizontal_compaction(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &[Vec<NodeIndex>],
-) -> HashMap<NodeIndex, f64> {
+    x_coordinates: &mut Vec<f64>,
+    visited_buf: &mut Vec<bool>,
+) -> Vec<f64> {
     info!(target: COORD_CALC_LOG_TARGET, "calculating coordinates for layout.");
+    // Reset buffers for this pass
+    x_coordinates.fill(0.0);
+    visited_buf.fill(false);
+
     compute_block_max_vertex_widths(graph);
 
-    let mut x_coordinates = place_blocks(graph, layers);
+    place_blocks(graph, layers, x_coordinates, visited_buf);
+
     // calculate class shifts
     info!(target: COORD_CALC_LOG_TARGET, "move blocks as close together as possible");
     for i in 0..layers.len() {
@@ -279,8 +294,8 @@ fn do_horizontal_compaction(
                         let gap = (graph[v].block_max_vertex_width
                             + graph[u].block_max_vertex_width)
                             * 0.5;
-                        let distance_v_u = *x_coordinates.get(&v).unwrap()
-                            - (*x_coordinates.get(&u).unwrap() + gap);
+                        let distance_v_u =
+                            x_coordinates[v.index()] - (x_coordinates[u.index()] + gap);
                         let u_sink = graph[u].sink;
                         graph[u_sink].shift = graph[u_sink]
                             .shift
@@ -296,12 +311,12 @@ fn do_horizontal_compaction(
         }
     }
 
-    // calculate absolute x-coordinates
+    // calculate absolute x-coordinates into a Vec indexed by NodeIndex
+    let mut result = vec![0.0f64; x_coordinates.len()];
     for v in graph.node_indices() {
-        let x = *x_coordinates.get(&v).unwrap() + graph[graph[v].sink].shift;
-        x_coordinates.insert(v, x);
+        result[v.index()] = x_coordinates[v.index()] + graph[graph[v].sink].shift;
     }
-    x_coordinates
+    result
 }
 
 /// Computes the maximum width of the vertices in each block and assigns the
@@ -338,34 +353,36 @@ fn compute_block_max_vertex_widths(graph: &mut StableDiGraph<Vertex, Edge>) {
 fn place_blocks(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &[Vec<NodeIndex>],
-) -> HashMap<NodeIndex, f64> {
+    x_coordinates: &mut Vec<f64>,
+    visited_buf: &mut Vec<bool>,
+) {
     info!(target: COORD_CALC_LOG_TARGET, "Placing vertices in blocks.");
-    let mut x_coordinates = HashMap::new();
-    // place blocks
     for root in graph
         .node_indices()
         .filter(|v| graph[*v].root == *v)
         .collect::<Vec<_>>()
     {
-        place_block(graph, layers, root, &mut x_coordinates);
+        place_block(graph, layers, root, x_coordinates, visited_buf);
     }
-    x_coordinates
 }
+
 fn place_block(
     graph: &mut StableDiGraph<Vertex, Edge>,
     layers: &[Vec<NodeIndex>],
     root: NodeIndex,
-    x_coordinates: &mut HashMap<NodeIndex, f64>,
+    x_coordinates: &mut Vec<f64>,
+    visited_buf: &mut Vec<bool>,
 ) {
-    if x_coordinates.get(&root).is_some() {
+    if visited_buf[root.index()] {
         return;
     }
-    x_coordinates.insert(root, 0.0);
+    visited_buf[root.index()] = true;
+    x_coordinates[root.index()] = 0.0;
     let mut w = root;
     loop {
         if graph[w].pos > 0 {
             let u = graph[pred(graph[w], layers)].root;
-            place_block(graph, layers, u, x_coordinates);
+            place_block(graph, layers, u, x_coordinates, visited_buf);
             // initialize sink of current node to have the same sink as the root
             if graph[root].sink == root {
                 graph[root].sink = graph[u].sink;
@@ -373,13 +390,8 @@ fn place_block(
             if graph[root].sink == graph[u].sink {
                 let gap =
                     (graph[root].block_max_vertex_width + graph[u].block_max_vertex_width) * 0.5;
-                x_coordinates.insert(
-                    root,
-                    x_coordinates
-                        .get(&root)
-                        .unwrap()
-                        .max(x_coordinates.get(&u).unwrap() + gap),
-                );
+                let new_x = x_coordinates[root.index()].max(x_coordinates[u.index()] + gap);
+                x_coordinates[root.index()] = new_x;
             }
         }
         w = graph[w].align;
@@ -390,7 +402,7 @@ fn place_block(
     // align all other vertices in this block to the x-coordinate of the root
     while graph[w].align != root {
         w = graph[w].align;
-        x_coordinates.insert(w, *x_coordinates.get(&root).unwrap());
+        x_coordinates[w.index()] = x_coordinates[root.index()];
         graph[w].sink = graph[root].sink;
     }
 }

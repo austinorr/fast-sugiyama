@@ -1,4 +1,5 @@
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
+use petgraph::visit::NodeIndexable;
 
 use crate::algorithm::p3_calculate_coordinates::{
     create_vertical_alignments, mark_type_1_conflicts,
@@ -334,9 +335,12 @@ fn place_blocks() {
         .map(|v| v.into())
         .collect();
 
-    let x_coordinates = super::place_blocks(&mut g, &l);
+    let node_bound = g.node_bound();
+    let mut x_buf = vec![0.0f64; node_bound];
+    let mut visited_buf = vec![false; node_bound];
+    super::place_blocks(&mut g, &l, &mut x_buf, &mut visited_buf);
 
-    assert_eq!(x_coordinates.len(), 26);
+    assert_eq!(g.node_count(), 26);
     for v in block_1 {
         assert_eq!(g[v].sink, 0.into());
     }

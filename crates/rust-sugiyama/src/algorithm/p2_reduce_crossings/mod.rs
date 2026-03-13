@@ -1,13 +1,15 @@
 #[cfg(test)]
 mod tests;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use log::{debug, info, trace};
 use petgraph::Direction::{Incoming, Outgoing};
 use petgraph::algo::toposort;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
+use petgraph::visit::NodeIndexable;
 
 use crate::configure::{CROSSING_LOG_TARGET, CrossingMinimization};
 use crate::util::{IterDir, iterate, radix_sort};
@@ -17,7 +19,10 @@ use super::{Edge, Vertex, slack};
 #[derive(Clone)]
 struct Order {
     _inner: Vec<Vec<NodeIndex>>,
-    positions: HashMap<NodeIndex, usize>,
+    /// Indexed by `NodeIndex::index()`. Sized to `graph.node_bound()` so every
+    /// valid NodeIndex maps directly without hashing.
+    positions: Vec<usize>,
+    node_bound: usize,
 }
 
 impl Display for Order {
@@ -36,16 +41,17 @@ impl Display for Order {
 }
 
 impl Order {
-    fn new(layers: Vec<Vec<NodeIndex>>) -> Self {
-        let mut positions = HashMap::new();
+    fn new(layers: Vec<Vec<NodeIndex>>, node_bound: usize) -> Self {
+        let mut positions = vec![0usize; node_bound];
         for l in &layers {
             for (pos, v) in l.iter().enumerate() {
-                positions.insert(*v, pos);
+                positions[v.index()] = pos;
             }
         }
         Self {
             _inner: layers,
             positions,
+            node_bound,
         }
     }
 
@@ -55,8 +61,8 @@ impl Order {
 
     fn exchange(&mut self, a: usize, b: usize, r: usize) {
         // first update positions, then swap
-        *self.positions.get_mut(&self._inner[r][a]).unwrap() = b;
-        *self.positions.get_mut(&self._inner[r][b]).unwrap() = a;
+        self.positions[self._inner[r][a].index()] = b;
+        self.positions[self._inner[r][b].index()] = a;
         self._inner[r].swap(a, b);
     }
 
@@ -65,20 +71,28 @@ impl Order {
         v: NodeIndex,
         w: NodeIndex,
         graph: &StableDiGraph<Vertex, Edge>,
+        v_adjacent: &mut Vec<usize>,
+        w_adjacent: &mut Vec<usize>,
     ) -> usize {
         let mut crossings = 0;
         for dir in [Incoming, Outgoing] {
-            let mut v_adjacent = graph
-                .neighbors_directed(v, dir)
-                .map(|n| *self.positions.get(&n).unwrap())
-                .collect::<Vec<_>>();
-            let mut w_adjacent = graph
-                .neighbors_directed(w, dir)
-                .map(|n| *self.positions.get(&n).unwrap())
-                .collect::<Vec<_>>();
-            v_adjacent.sort();
-            w_adjacent.sort();
-            crossings += Self::calculate_cross_count_two_vertices(&v_adjacent, &w_adjacent);
+            v_adjacent.clear();
+            v_adjacent.extend(
+                graph
+                    .neighbors_directed(v, dir)
+                    .map(|n| self.positions[n.index()]),
+            );
+            v_adjacent.sort_unstable();
+
+            w_adjacent.clear();
+            w_adjacent.extend(
+                graph
+                    .neighbors_directed(w, dir)
+                    .map(|n| self.positions[n.index()]),
+            );
+            w_adjacent.sort_unstable();
+
+            crossings += Self::calculate_cross_count_two_vertices(v_adjacent, w_adjacent);
         }
         crossings
     }
@@ -126,8 +140,7 @@ impl Order {
                     graph
                         .neighbors_directed(*v, Outgoing)
                         .filter(|n| graph[*v].rank.abs_diff(graph[*n].rank) == 1)
-                        .filter_map(|n| self.positions.get(&n))
-                        .copied()
+                        .map(|n| self.positions[n.index()])
                         .collect(),
                     key_length,
                 )
@@ -199,7 +212,7 @@ pub(super) fn insert_dummy_vertices(
     graph: &mut StableDiGraph<Vertex, Edge>,
     minimum_length: i32,
     dummy_size: f64,
-    dummy_id_offset: usize,
+    dummy_id_counter: &AtomicUsize,
 ) {
     // find all edges that have slack of greater than 0.
     // and insert dummy vertices
@@ -222,7 +235,7 @@ pub(super) fn insert_dummy_vertices(
                         ..Default::default()
                     };
                     let new = graph.add_node(d);
-                    graph[new].id = new.index() + dummy_id_offset;
+                    graph[new].id = dummy_id_counter.fetch_add(1, Ordering::Relaxed);
                     graph[new].align = new;
                     graph[new].root = new;
                     graph[new].sink = new;
@@ -286,8 +299,7 @@ pub(super) fn ordering(
     order._inner
 }
 
-type CMMethod =
-    fn(&StableDiGraph<Vertex, Edge>, NodeIndex, bool, &HashMap<NodeIndex, usize>) -> f64;
+type CMMethod = fn(&StableDiGraph<Vertex, Edge>, NodeIndex, bool, &[usize]) -> f64;
 
 fn init_order(graph: &StableDiGraph<Vertex, Edge>) -> Order {
     info!(target: CROSSING_LOG_TARGET,
@@ -321,7 +333,7 @@ fn init_order(graph: &StableDiGraph<Vertex, Edge>) -> Order {
         .node_indices()
         .for_each(|v| dfs(v, &mut order, graph, &mut visited));
 
-    Order::new(order)
+    Order::new(order, graph.node_bound())
 }
 
 fn reduce_crossings_bilayer_sweep(
@@ -331,31 +343,33 @@ fn reduce_crossings_bilayer_sweep(
     transpose: bool,
 ) -> Order {
     info!(target: CROSSING_LOG_TARGET, "Reducing crossings via bilayer sweep");
+    let node_bound = order.node_bound;
     let mut best_crossings = order.crossings(graph);
     debug!(target: CROSSING_LOG_TARGET, "Initial number of crossings: {best_crossings}");
     let mut last_best = 0;
-    let mut best = order.clone();
+    let mut best_layers = order._inner.clone();
     for i in 0.. {
-        order = order_layer(graph, i % 2 == 0, &order, cm_method);
+        let move_down = i % 2 == 0;
+        order = order_layer(graph, &order, move_down, cm_method);
         if transpose {
-            self::transpose(graph, &mut order, i % 2 == 0);
+            self::transpose(graph, &mut order, move_down);
         }
         let crossings = order.crossings(graph);
         trace!(target: CROSSING_LOG_TARGET, "Current number of crossings: {crossings}");
         if crossings < best_crossings {
             best_crossings = crossings;
             debug!(target: CROSSING_LOG_TARGET, "Lowest number of crossings so far: {best_crossings}");
-            best = order.clone();
+            best_layers.clone_from(&order._inner);
             last_best = 0;
         } else {
             last_best += 1;
         }
         if last_best == 4 {
             info!(target: CROSSING_LOG_TARGET, "Didn't improve after 4 sweeps, returning");
-            return best;
+            return Order::new(best_layers, node_bound);
         }
     }
-    best
+    Order::new(best_layers, node_bound)
 }
 
 fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: bool) {
@@ -369,6 +383,10 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
         IterDir::Backward
     };
 
+    // Allocate scratch buffers once for the entire transpose phase
+    let mut v_adjacent: Vec<usize> = Vec::with_capacity(64);
+    let mut w_adjacent: Vec<usize> = Vec::with_capacity(64);
+
     while improved {
         improved = false;
         for r in iterate(iter_dir, order.max_rank()) {
@@ -376,8 +394,10 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
             for i in 0..order._inner[r].len() - 1 {
                 let v = order._inner[r][i];
                 let w = order._inner[r][i + 1];
-                let v_w_crossing = order.cross_count_two_vertices(v, w, graph);
-                let w_v_crossing = order.cross_count_two_vertices(w, v, graph);
+                let v_w_crossing =
+                    order.cross_count_two_vertices(v, w, graph, &mut v_adjacent, &mut w_adjacent);
+                let w_v_crossing =
+                    order.cross_count_two_vertices(w, v, graph, &mut v_adjacent, &mut w_adjacent);
                 if v_w_crossing > w_v_crossing {
                     improved = true;
                     order.exchange(i, i + 1, r);
@@ -390,10 +410,11 @@ fn transpose(graph: &StableDiGraph<Vertex, Edge>, order: &mut Order, move_down: 
 
 fn order_layer(
     graph: &StableDiGraph<Vertex, Edge>,
-    move_down: bool,
     cur_order: &Order,
+    move_down: bool,
     cm_method: CMMethod,
 ) -> Order {
+    let node_bound = cur_order.node_bound;
     let mut new_order = vec![Vec::new(); cur_order.max_rank()];
     let mut positions = cur_order.positions.clone();
     let dir: Vec<usize> = if move_down {
@@ -404,44 +425,38 @@ fn order_layer(
         (0..cur_order.max_rank() - 1).rev().collect()
     };
 
+    // Reusable score buffer, cleared per-rank implicitly by overwriting
+    let mut scores = vec![0.0f64; node_bound];
+
     for rank in dir {
         trace!(target: CROSSING_LOG_TARGET, "Updating order of vertices in rank {rank}");
         trace!(target: CROSSING_LOG_TARGET, "Original order: {:?}",
-            cur_order[rank]
-                .iter()
-                .map(|v| v.index())
-                .collect::<Vec<_>>()
-                .as_slice()
+            cur_order[rank].iter().map(|v| v.index()).collect::<Vec<_>>()
         );
 
         new_order[rank].clone_from(&cur_order[rank]);
-        let ordering = new_order[rank]
-            .iter()
-            .map(|n| (*n, cm_method(graph, *n, move_down, &positions)))
-            .collect::<HashMap<NodeIndex, f64>>();
-        trace!(target: CROSSING_LOG_TARGET, "Ordering: {ordering:?}" );
-        new_order[rank].sort_by(|a, b| ordering.get(a).partial_cmp(&ordering.get(b)).unwrap());
+        // Fill scores for each node in this rank, then sort by score
+        for &n in &new_order[rank] {
+            scores[n.index()] = cm_method(graph, n, move_down, &positions);
+        }
+        new_order[rank].sort_unstable_by(|a, b| scores[a.index()].total_cmp(&scores[b.index()]));
 
         new_order[rank].iter().enumerate().for_each(|(pos, v)| {
-            positions.insert(*v, pos);
+            positions[v.index()] = pos;
         });
         trace!(target: CROSSING_LOG_TARGET, "Updated order : {:?}",
-            new_order[rank]
-                .iter()
-                .map(|v| v.index())
-                .collect::<Vec<_>>()
-                .as_slice()
+            new_order[rank].iter().map(|v| v.index()).collect::<Vec<_>>()
         );
     }
 
-    Order::new(new_order)
+    Order::new(new_order, node_bound)
 }
 
 fn barycenter(
     graph: &StableDiGraph<Vertex, Edge>,
     vertex: NodeIndex,
     move_down: bool,
-    positions: &HashMap<NodeIndex, usize>,
+    positions: &[usize],
 ) -> f64 {
     let neighbors: Vec<_> = if move_down {
         graph.neighbors_directed(vertex, Incoming).collect()
@@ -450,14 +465,14 @@ fn barycenter(
     };
 
     if neighbors.is_empty() {
-        return *positions.get(&vertex).unwrap() as f64;
+        return positions[vertex.index()] as f64;
     }
 
     // Only look at direct neighbors
     let adjacent = neighbors
         .into_iter()
         // .filter(|n| graph[vertex].rank.abs_diff(graph[*n].rank) == 1)
-        .map(|n| *positions.get(&n).unwrap())
+        .map(|n| positions[n.index()])
         .collect::<Vec<usize>>();
 
     if !adjacent.is_empty() {
@@ -471,7 +486,7 @@ fn median(
     graph: &StableDiGraph<Vertex, Edge>,
     vertex: NodeIndex,
     move_down: bool,
-    positions: &HashMap<NodeIndex, usize>,
+    positions: &[usize],
 ) -> f64 {
     let neighbors: Vec<_> = if move_down {
         graph.neighbors_directed(vertex, Incoming).collect()
@@ -482,7 +497,7 @@ fn median(
     let mut adjacent = neighbors
         .into_iter()
         .filter(|n| graph[vertex].rank.abs_diff(graph[*n].rank) == 1)
-        .map(|n| *positions.get(&n).unwrap())
+        .map(|n| positions[n.index()])
         .collect::<Vec<_>>();
 
     adjacent.sort();
