@@ -156,8 +156,8 @@ impl GraphBuilder {
 #[cfg(test)]
 mod insert_dummy_vertices {
 
-    use std::sync::atomic::AtomicUsize;
     use petgraph::stable_graph::StableDiGraph;
+    use std::sync::atomic::AtomicUsize;
 
     use crate::{
         algorithm::p2_reduce_crossings::{
@@ -268,8 +268,8 @@ mod insert_dummy_vertices {
 }
 
 mod init_order {
-    use std::sync::atomic::AtomicUsize;
     use crate::algorithm::p2_reduce_crossings::insert_dummy_vertices;
+    use std::sync::atomic::AtomicUsize;
 
     use super::{
         COMPLEX_EXAMPLE, COMPLEX_EXAMPLE_RANKS, GraphBuilder, ONE_DUMMY, ONE_DUMMY_RANKS,
@@ -366,7 +366,10 @@ mod order {
         graph.add_edge(n2, s1, Edge::default());
         graph.add_edge(n3, s0, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2, n3], vec![s0, s1, s2, s3]], graph.node_count());
+        let order = Order::new(
+            vec![vec![n0, n1, n2, n3], vec![s0, s1, s2, s3]],
+            graph.node_count(),
+        );
 
         assert_eq!(order.bilayer_cross_count(&graph, 0), 6);
     }
@@ -398,7 +401,10 @@ mod order {
         g.add_edge(n5, s2, Edge::default());
         g.add_edge(n5, s4, Edge::default());
 
-        let order = Order::new(vec![vec![n0, n1, n2, n3, n4, n5], vec![s0, s1, s2, s3, s4]], g.node_count());
+        let order = Order::new(
+            vec![vec![n0, n1, n2, n3, n4, n5], vec![s0, s1, s2, s3, s4]],
+            g.node_count(),
+        );
         assert_eq!(order.crossings(&g), 12);
     }
 
